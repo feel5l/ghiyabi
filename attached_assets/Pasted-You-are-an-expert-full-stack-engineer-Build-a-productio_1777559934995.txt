@@ -1,0 +1,305 @@
+You are an expert full-stack engineer. Build a production-ready,
+Netlify-deployable school attendance web app called "Ghiyabi"
+in ONE continuous build. Do not stop and ask questions — make
+all reasonable decisions yourself and build the complete app.
+
+════════════════════════════════════════════
+TECH STACK (mandatory — do not change)
+════════════════════════════════════════════
+Frontend : React 18 + Vite + TypeScript + Tailwind CSS v3
+Backend  : Supabase (database + auth + edge functions)
+Database : Supabase PostgreSQL (managed, no local DB needed)
+Email    : Resend API (via Supabase Edge Function)
+Hosting  : Netlify (static frontend only — NO Express server)
+Auth     : Supabase Auth with Google OAuth + email/password
+
+════════════════════════════════════════════
+SCHOOL DATA (hard-code as seed data)
+════════════════════════════════════════════
+School name: Zaid Bin Thabit Primary School
+Classes (12 total):
+  Grade 3: 3-A, 3-B, 3-C, 3-D
+  Grade 4: 4-A, 4-B, 4-C
+  Grade 5: 5-A, 5-B, 5-C
+  Grade 6: 6-A, 6-B
+
+════════════════════════════════════════════
+DATABASE SCHEMA (Supabase SQL)
+════════════════════════════════════════════
+Create these tables using Supabase SQL editor.
+Include the SQL in a file: supabase/schema.sql
+
+-- 1. classes
+CREATE TABLE classes (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name        TEXT NOT NULL,          -- e.g. "3-A"
+  grade_level TEXT NOT NULL,          -- e.g. "Grade 3"
+  teacher_email TEXT
+);
+
+-- 2. students
+CREATE TABLE students (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  full_name     TEXT NOT NULL,
+  class_id      UUID REFERENCES classes(id),
+  parent_email  TEXT,
+  parent_phone  TEXT,
+  is_active     BOOLEAN DEFAULT true
+);
+
+-- 3. sessions
+CREATE TABLE sessions (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  date          DATE NOT NULL DEFAULT CURRENT_DATE,
+  period        TEXT NOT NULL,         -- "P1".."P6"
+  subject       TEXT NOT NULL,
+  class_id      UUID REFERENCES classes(id),
+  teacher_email TEXT NOT NULL
+);
+
+-- 4. attendance_log
+CREATE TABLE attendance_log (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  student_id  UUID REFERENCES students(id),
+  session_id  UUID REFERENCES sessions(id),
+  status      TEXT DEFAULT 'Present'
+              CHECK (status IN ('Present','Absent','Late','Excused')),
+  marked_at   TIMESTAMPTZ DEFAULT now(),
+  note        TEXT,
+  UNIQUE(student_id, session_id)       -- prevent duplicates
+);
+
+-- 5. admins
+CREATE TABLE admins (
+  email TEXT PRIMARY KEY
+);
+
+-- ROW LEVEL SECURITY (RLS)
+-- Enable RLS on all tables.
+-- Teachers: can only see their own classes, sessions, and
+--   attendance_log rows linked to their sessions.
+-- Admins: full access to all tables.
+-- Use auth.email() from Supabase Auth for comparisons.
+-- Write the full RLS policies in the schema.sql file.
+
+Also create a seed.sql file at supabase/seed.sql
+that inserts all 12 classes and at least 5 sample students
+per class for testing.
+
+════════════════════════════════════════════
+CORE LOGIC (critical — implement exactly)
+════════════════════════════════════════════
+When a teacher opens a Session to take attendance:
+  1. Check if attendance_log rows exist for that session.
+  2. If NOT: auto-create one row per active student in that
+     class with status = 'Present' (using a Supabase
+     Edge Function or a client-side batch insert on mount).
+  3. Teacher then only taps to change students who are absent/late.
+  4. Each tap calls an UPDATE (not INSERT) on attendance_log.
+  5. This pattern prevents duplicate rows (UNIQUE constraint).
+
+════════════════════════════════════════════
+PAGES AND COMPONENTS
+════════════════════════════════════════════
+
+PAGE 1 — /login
+  - Google Sign-In button (Supabase Auth Google OAuth).
+  - Email + password fallback.
+  - After login, redirect based on role:
+      admin → /admin
+      teacher → /teacher
+
+PAGE 2 — /teacher (Teacher Dashboard)
+  - Header: "Ghiyabi — غيابي", user name, logout button.
+  - Main content: list of today's sessions for this teacher
+    (filter: date = today AND teacher_email = current user email).
+  - Each session card shows: Class, Subject, Period, Date.
+  - "Take Attendance" button on each card → /teacher/session/:id
+  - Mobile-first layout, large tap targets (min 48px height).
+
+PAGE 3 — /teacher/session/:id (Mark Attendance)
+  - Show session header: Class, Subject, Period, Date.
+  - On page load: auto-initialize attendance rows if needed
+    (call Supabase function or batch insert).
+  - Show list of students with their current status.
+  - Each student row has 4 status buttons:
+      ✅ Present (green)
+      ❌ Absent  (red)
+      ⏰ Late    (orange)
+      📋 Excused (blue)
+  - Tapping a button immediately calls UPDATE on attendance_log
+    (optimistic UI update — no page reload).
+  - Show a colored chip next to each student name with
+    their current status.
+  - "Done ✓" button at bottom → navigate back to /teacher.
+
+PAGE 4 — /admin (Admin Dashboard)
+  - Protected: redirect to /login if not admin.
+  - Top KPI cards:
+      • Total students today
+      • Absent count today
+      • Sessions not started today
+  - Table: each class row showing:
+      Class name | Students | Absent today | % Absent
+      Color row: green < 5%, yellow 5-10%, red > 10%
+  - Section: "Sessions Not Started Today"
+      List of sessions where no attendance_log rows exist.
+  - Section: "Top Absentees This Week"
+      Students with most Absent records in last 7 days.
+  - Date range filter (default: today).
+
+PAGE 5 — /admin/students (Student Management)
+  - CRUD table for students.
+  - Filter by class.
+  - Import CSV option (optional, skip if too complex).
+
+PAGE 6 — /admin/classes (Class Management)
+  - CRUD table for classes.
+
+════════════════════════════════════════════
+EMAIL NOTIFICATIONS (Supabase Edge Function)
+════════════════════════════════════════════
+Create a Supabase Edge Function at:
+  supabase/functions/notify-absent/index.ts
+
+This function should:
+  1. Be triggered by a Supabase Database Webhook on
+     attendance_log table for INSERT and UPDATE events.
+  2. Check if new status = 'Absent'.
+  3. Check if old status was NOT 'Absent' (avoid duplicates).
+  4. If both conditions true:
+     - Fetch student full_name and parent_email from students table.
+     - Fetch date, period, subject, class name from sessions/classes.
+     - Send email via Resend API:
+         To: parent_email
+         From: noreply@ghiyabi.school
+         Subject: إشعار غياب — [student name]
+         Body (Arabic HTML email):
+           "عزيزي ولي الأمر،
+           نُحيطكم علماً بأن الطالب/ة [full_name]
+           غائب/ة بتاريخ [date] في حصة [period]
+           مادة: [subject] — فصل: [class name].
+           يُرجى التواصل مع إدارة المدرسة.
+           مدرسة زيد بن ثابت الابتدائية"
+  5. If parent_email is empty, skip silently.
+  Store RESEND_API_KEY in Supabase Edge Function secrets.
+
+════════════════════════════════════════════
+UI / UX REQUIREMENTS
+════════════════════════════════════════════
+- RTL (right-to-left) layout: set dir="rtl" on <html>.
+- Arabic UI labels throughout (use both Arabic and English
+  in the code: Arabic for display, English for variable names).
+- Tailwind CSS for all styling — no inline styles.
+- Responsive: mobile-first at 375px, works on desktop too.
+- Dark mode support via Tailwind's dark: variant.
+- Loading skeletons for data fetching (not spinners).
+- Empty states with a clear message and action button.
+- Toast notifications (use react-hot-toast) for:
+    ✅ Attendance saved
+    ❌ Error saving
+    📧 Notification sent
+
+════════════════════════════════════════════
+PROJECT STRUCTURE
+════════════════════════════════════════════
+Organize the project as follows:
+
+ghiyabi/
+├── src/
+│   ├── components/
+│   │   ├── AttendanceRow.tsx
+│   │   ├── SessionCard.tsx
+│   │   ├── KpiCard.tsx
+│   │   └── Skeleton.tsx
+│   ├── pages/
+│   │   ├── Login.tsx
+│   │   ├── TeacherDashboard.tsx
+│   │   ├── SessionAttendance.tsx
+│   │   ├── AdminDashboard.tsx
+│   │   ├── Students.tsx
+│   │   └── Classes.tsx
+│   ├── lib/
+│   │   └── supabase.ts    (Supabase client init)
+│   ├── hooks/
+│   │   └── useAuth.ts
+│   ├── App.tsx
+│   └── main.tsx
+├── supabase/
+│   ├── schema.sql
+│   ├── seed.sql
+│   └── functions/
+│       └── notify-absent/
+│           └── index.ts
+├── public/
+│   └── _redirects         ← CRITICAL for Netlify SPA routing
+├── netlify.toml           ← CRITICAL for Netlify deployment
+├── .env.example
+└── README.md
+
+════════════════════════════════════════════
+NETLIFY DEPLOYMENT CONFIG (mandatory files)
+════════════════════════════════════════════
+Create netlify.toml with:
+
+  [build]
+    command = "npm run build"
+    publish = "dist"
+
+  [[redirects]]
+    from = "/*"
+    to = "/index.html"
+    status = 200
+
+Create public/_redirects with:
+  /* /index.html 200
+
+This ensures React Router works correctly on Netlify
+(deep links and page refresh won't 404).
+
+════════════════════════════════════════════
+ENVIRONMENT VARIABLES
+════════════════════════════════════════════
+Create .env.example (not .env) with:
+
+  VITE_SUPABASE_URL=your_supabase_project_url
+  VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+Add a clear README.md explaining:
+  1. How to create a Supabase project.
+  2. How to run supabase/schema.sql and seed.sql.
+  3. How to set up Google OAuth in Supabase.
+  4. How to deploy the Supabase Edge Function.
+  5. How to connect GitHub to Netlify.
+  6. Which environment variables to set in Netlify dashboard.
+
+════════════════════════════════════════════
+GITHUB EXPORT INSTRUCTIONS (add to README)
+════════════════════════════════════════════
+In the README, add a section called "Push to GitHub":
+
+  1. In Replit, open the Git tab (left sidebar).
+  2. Click "Connect to GitHub".
+  3. Create a new repository named "ghiyabi".
+  4. Click "Push to GitHub".
+  5. In Netlify: New site → Import from GitHub → select ghiyabi.
+  6. Set build command: npm run build
+  7. Set publish directory: dist
+  8. Add environment variables in Netlify Site Settings.
+  9. Click Deploy.
+
+════════════════════════════════════════════
+QUALITY REQUIREMENTS
+════════════════════════════════════════════
+- Zero TypeScript errors (run tsc --noEmit before finishing).
+- No hardcoded secrets anywhere in the code.
+- All Supabase calls have proper error handling with
+  user-friendly Arabic error messages.
+- All forms have client-side validation.
+- All data tables have loading and empty states.
+- The app must run with npm run dev without any errors.
+- The build must succeed with npm run build (Vite).
+
+BUILD THIS COMPLETE APP NOW without stopping to ask questions.
+Make all architectural decisions yourself.
+When done, confirm by listing all created files.
