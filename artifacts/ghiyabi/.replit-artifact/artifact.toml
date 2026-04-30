@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Ghiyabi — غيابي"
+version = "1.0.0"
+id = "artifacts/ghiyabi"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25812
+
+[services.development]
+run = "pnpm --filter @workspace/ghiyabi run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/ghiyabi", "run", "build" ]
+publicDir = "artifacts/ghiyabi/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25812"
+BASE_PATH = "/"

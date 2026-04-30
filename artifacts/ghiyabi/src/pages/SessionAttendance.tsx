@@ -1,0 +1,201 @@
+import { useEffect, useState } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../hooks/useAuth';
+import type { Session, Student, AttendanceLog } from '../lib/supabase';
+import { AttendanceRow } from '../components/AttendanceRow';
+import { SkeletonRow } from '../components/Skeleton';
+
+const PERIOD_LABELS: Record<string, string> = {
+  P1: 'الحصة الأولى',
+  P2: 'الحصة الثانية',
+  P3: 'الحصة الثالثة',
+  P4: 'الحصة الرابعة',
+  P5: 'الحصة الخامسة',
+  P6: 'الحصة السادسة',
+};
+
+export default function SessionAttendance() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const [session, setSession] = useState<Session | null>(null);
+  const [logs, setLogs] = useState<AttendanceLog[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [initializing, setInitializing] = useState(false);
+
+  useEffect(() => {
+    if (id) loadSession();
+  }, [id]);
+
+  async function loadSession() {
+    setLoading(true);
+    // Load session with class info
+    const { data: sessionData, error: sessionError } = await supabase
+      .from('sessions')
+      .select('*, classes(id, name, grade_level, teacher_email)')
+      .eq('id', id)
+      .single();
+
+    if (sessionError || !sessionData) {
+      toast.error('لم يتم العثور على الحصة');
+      navigate('/teacher');
+      return;
+    }
+
+    const sess = sessionData as Session;
+    setSession(sess);
+
+    // Load active students in this class
+    const { data: studentData } = await supabase
+      .from('students')
+      .select('*')
+      .eq('class_id', sess.class_id)
+      .eq('is_active', true)
+      .order('full_name');
+
+    const studentList = (studentData as Student[]) || [];
+    setStudents(studentList);
+
+    // Load existing attendance logs
+    const { data: logData } = await supabase
+      .from('attendance_log')
+      .select('*')
+      .eq('session_id', id);
+
+    const existingLogs = (logData as AttendanceLog[]) || [];
+
+    if (existingLogs.length === 0 && studentList.length > 0) {
+      // Auto-initialize: create Present rows for all active students
+      await initializeAttendance(id!, studentList);
+    } else {
+      setLogs(existingLogs);
+    }
+
+    setLoading(false);
+  }
+
+  async function initializeAttendance(sessionId: string, studentList: Student[]) {
+    setInitializing(true);
+    const rows = studentList.map((s) => ({
+      student_id: s.id,
+      session_id: sessionId,
+      status: 'Present' as const,
+    }));
+
+    const { data, error } = await supabase
+      .from('attendance_log')
+      .insert(rows)
+      .select();
+
+    setInitializing(false);
+    if (error) {
+      toast.error('حدث خطأ في تهيئة سجل الحضور');
+    } else {
+      setLogs((data as AttendanceLog[]) || []);
+      toast.success('تم تهيئة سجل الحضور — جميع الطلاب حاضرون افتراضياً');
+    }
+  }
+
+  // Map log by student_id for quick lookup
+  const logMap = new Map(logs.map((l) => [l.student_id, l]));
+
+  const presentCount = logs.filter((l) => l.status === 'Present').length;
+  const absentCount = logs.filter((l) => l.status === 'Absent').length;
+  const lateCount = logs.filter((l) => l.status === 'Late').length;
+  const excusedCount = logs.filter((l) => l.status === 'Excused').length;
+
+  if (loading || initializing) {
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="bg-card border-b border-border sticky top-0 z-10">
+          <div className="max-w-2xl mx-auto px-4 py-3">
+            <div className="h-6 w-32 skeleton rounded" />
+          </div>
+        </header>
+        <main className="max-w-2xl mx-auto px-4 py-6 space-y-3">
+          {[1,2,3,4,5].map((i) => <SkeletonRow key={i} />)}
+        </main>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="bg-card border-b border-border sticky top-0 z-10">
+        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
+          <Link to="/teacher" className="text-primary hover:underline text-sm font-medium">
+            ← رجوع
+          </Link>
+          <div className="flex-1">
+            <h1 className="text-lg font-bold text-foreground">{session?.subject}</h1>
+            <p className="text-xs text-muted-foreground">
+              {session?.classes?.grade_level} — فصل {session?.classes?.name} — {PERIOD_LABELS[session?.period || ''] || session?.period}
+            </p>
+          </div>
+          <div className="text-left text-xs text-muted-foreground">
+            {session?.date && new Date(session.date).toLocaleDateString('ar-SA', {
+              day: 'numeric', month: 'long',
+            })}
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-2xl mx-auto px-4 py-6">
+        {/* Stats summary */}
+        <div className="grid grid-cols-4 gap-2 mb-6">
+          {[
+            { label: 'حاضر', count: presentCount, cls: 'bg-green-50 border-green-200 text-green-700' },
+            { label: 'غائب', count: absentCount, cls: 'bg-red-50 border-red-200 text-red-700' },
+            { label: 'متأخر', count: lateCount, cls: 'bg-orange-50 border-orange-200 text-orange-700' },
+            { label: 'معذور', count: excusedCount, cls: 'bg-blue-50 border-blue-200 text-blue-700' },
+          ].map(({ label, count, cls }) => (
+            <div key={label} className={`border rounded-xl p-3 text-center ${cls}`}>
+              <p className="text-2xl font-bold">{count}</p>
+              <p className="text-xs mt-0.5">{label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Students list */}
+        {students.length === 0 ? (
+          <div className="text-center py-12 border border-dashed border-border rounded-2xl">
+            <div className="text-4xl mb-3">👥</div>
+            <h3 className="font-semibold text-foreground mb-1">لا يوجد طلاب في هذا الفصل</h3>
+            <p className="text-sm text-muted-foreground">أضف طلاباً من لوحة الإدارة</p>
+          </div>
+        ) : (
+          <div className="bg-card border border-card-border rounded-xl px-4 py-2 shadow-sm">
+            {students.map((student, idx) => {
+              const log = logMap.get(student.id);
+              if (!log) return null;
+              return (
+                <AttendanceRow
+                  key={student.id}
+                  log={log}
+                  studentName={student.full_name}
+                  index={idx}
+                />
+              );
+            })}
+          </div>
+        )}
+
+        {/* Done button */}
+        <div className="mt-8 pt-4">
+          <button
+            onClick={() => navigate('/teacher')}
+            className="w-full min-h-[52px] bg-primary text-primary-foreground rounded-xl font-bold text-base hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+          >
+            <span>✓</span>
+            <span>تم — العودة للرئيسية</span>
+          </button>
+        </div>
+      </main>
+    </div>
+  );
+}
