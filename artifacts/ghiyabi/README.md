@@ -46,6 +46,8 @@ A school attendance tracking system built with React + Vite + Supabase.
 5. Copy Client ID and Client Secret
 6. In Supabase: **Authentication → Providers → Google** — paste the credentials
 
+> **After deploying to Netlify**, complete the extra step in [Post-Deployment: Enable Google Login](#post-deployment-enable-google-login) below.
+
 ### 4. Get Your API Keys
 
 In Supabase dashboard → **Settings → API**:
@@ -197,6 +199,46 @@ ghiyabi/
 ├── .env.example                # Required environment variables
 └── README.md
 ```
+
+---
+
+## Post-Deployment: Enable Google Login
+
+After your Netlify site is live, Google login will fail with a **redirect_uri_mismatch** error unless you complete these two configuration steps.
+
+### Step 1 — Add your Netlify URL to Supabase
+
+Supabase must whitelist the Netlify domain so it knows it is allowed to redirect users back there after Google login completes.
+
+1. Open your [Supabase dashboard](https://supabase.com/dashboard) and select your project
+2. Go to **Authentication → URL Configuration**
+3. Under **Additional Redirect URLs**, add your Netlify site URL:
+   ```
+   https://your-site.netlify.app
+   ```
+   Replace `your-site` with your actual Netlify subdomain (e.g. `ghiyabi`).
+4. Click **Save**
+
+> If you set a custom domain on Netlify, add that too (e.g. `https://ghiyabi.example.com`).
+
+### Step 2 — Verify the Supabase callback is in Google Cloud Console
+
+The OAuth callback URL (`https://your-project.supabase.co/auth/v1/callback`) must be listed as an **Authorized redirect URI** in your Google OAuth client. This should already be set from Step 3 of the setup guide, but confirm it:
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com) → **APIs & Services → Credentials**
+2. Click on your OAuth 2.0 Client ID
+3. Under **Authorized redirect URIs**, confirm this URL is present:
+   ```
+   https://your-project.supabase.co/auth/v1/callback
+   ```
+   Replace `your-project` with your Supabase project reference (visible in your Supabase project URL).
+4. If it is missing, click **Add URI**, paste it in, and click **Save**
+
+> Changes in Google Cloud Console can take a few minutes to propagate.
+
+### After both steps
+
+Open your Netlify site, click **تسجيل الدخول بـ Google**, and you should be redirected to Google and back successfully. If you still see an error, double-check that the Supabase project ref and Netlify subdomain are spelled correctly in the URLs above.
 
 ---
 
