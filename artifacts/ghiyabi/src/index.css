@@ -1,3 +1,6 @@
+/* Arabic font — must come before tailwindcss @import */
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap');
+
 @import "tailwindcss";
 @import "tw-animate-css";
 @plugin "@tailwindcss/typography";
@@ -142,9 +145,6 @@
     direction: rtl;
   }
 }
-
-/* Arabic font */
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap');
 
 /* Status colors */
 .status-present { @apply bg-green-100 text-green-800 border border-green-200; }
