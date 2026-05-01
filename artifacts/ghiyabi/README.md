@@ -83,8 +83,13 @@ supabase login
 # Link your project
 supabase link --project-ref your-project-ref
 
-# Set edge function secrets
+# Generate a strong random webhook secret (keep this private!)
+openssl rand -base64 32
+# Example output: aB3xK9mNpQrZ2wYuT7vL1sHjFdCeI4oG...
+
+# Set edge function secrets (use the secret you generated above)
 supabase secrets set RESEND_API_KEY=your-resend-api-key
+supabase secrets set NOTIFY_WEBHOOK_SECRET=your-generated-secret-above
 
 # Deploy the function
 supabase functions deploy notify-absent
@@ -95,7 +100,9 @@ After deploying, set up the Database Webhook in Supabase:
 2. Table: `attendance_log`
 3. Events: `INSERT`, `UPDATE`
 4. Webhook URL: `https://your-project.supabase.co/functions/v1/notify-absent`
-5. HTTP headers: Add `Authorization: Bearer your-anon-key`
+5. HTTP headers: Add `Authorization: Bearer your-generated-secret-above`
+
+> **Security note:** The `NOTIFY_WEBHOOK_SECRET` is a private shared secret that protects this endpoint from unauthorized calls. Never use your Supabase anon key here — the anon key is public and would allow anyone to trigger email sends with forged data.
 
 ### 7. Push to GitHub
 

@@ -1,12 +1,19 @@
 // Supabase Edge Function: notify-absent
-// Triggered by database webhook on attendance_log INSERT/UPDATE events
+// Triggered by Supabase Database Webhooks on attendance_log INSERT/UPDATE events
 // Sends Arabic absence notification email via Resend API
+//
+// SECURITY: Requests must include the header:
+//   Authorization: Bearer <NOTIFY_WEBHOOK_SECRET>
+// Set NOTIFY_WEBHOOK_SECRET in Supabase Edge Function secrets (Supabase Dashboard →
+// Functions → notify-absent → Secrets). Use the same value when configuring the
+// Database Webhook in Supabase Dashboard → Database → Webhooks.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const NOTIFY_WEBHOOK_SECRET = Deno.env.get('NOTIFY_WEBHOOK_SECRET')!;
 
 interface WebhookPayload {
   type: 'INSERT' | 'UPDATE' | 'DELETE';
@@ -25,9 +32,23 @@ interface AttendanceRecord {
 }
 
 Deno.serve(async (req: Request): Promise<Response> => {
-  // Only accept POST from Supabase webhook
+  // Only accept POST
   if (req.method !== 'POST') {
     return new Response('Method Not Allowed', { status: 405 });
+  }
+
+  // Verify shared secret — reject any request without a valid secret
+  if (!NOTIFY_WEBHOOK_SECRET) {
+    console.error('NOTIFY_WEBHOOK_SECRET is not configured');
+    return new Response('Service Misconfigured', { status: 500 });
+  }
+
+  const authHeader = req.headers.get('Authorization') || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+
+  if (!token || token !== NOTIFY_WEBHOOK_SECRET) {
+    console.warn('Unauthorized webhook request — invalid or missing secret');
+    return new Response('Unauthorized', { status: 401 });
   }
 
   try {
@@ -135,7 +156,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     <p style="color:#374151; font-size:16px;">عزيزي ولي أمر الطالب/ة،</p>
 
     <div class="alert-box">
-      <h2>⚠️ إشعار غياب</h2>
+      <h2>&#9888;&#65039; إشعار غياب</h2>
       <p style="margin:0; color:#374151;">نُحيطكم علماً بأن:</p>
     </div>
 
@@ -156,7 +177,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     </div>
 
     <div class="contact-note">
-      📞 يُرجى التواصل مع إدارة المدرسة إذا كان الغياب بعذر.
+      &#128222; يُرجى التواصل مع إدارة المدرسة إذا كان الغياب بعذر.
     </div>
 
     <div class="footer">
