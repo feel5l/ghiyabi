@@ -15,7 +15,7 @@ export default function TeacherDashboard() {
   const today = new Date().toISOString().split('T')[0];
 
   useEffect(() => {
-    if (!user?.email) return;
+    if (!user?.id) return;
     fetchSessions();
   }, [user]);
 
@@ -23,9 +23,9 @@ export default function TeacherDashboard() {
     setLoading(true);
     const { data, error } = await supabase
       .from('sessions')
-      .select('*, classes(id, name, grade_level, teacher_email)')
+      .select('*, classes(id, name, grade_level, teacher_id, teacher_email)')
       .eq('date', today)
-      .eq('teacher_email', user!.email!)
+      .eq('teacher_id', user!.id)
       .order('period');
     setLoading(false);
     if (error) {
@@ -39,7 +39,10 @@ export default function TeacherDashboard() {
     await signOut();
   }
 
-  const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'المعلم';
+  // Teachers have a synthetic "<phone>@teachers.ghiyabi.local" email that we
+  // never want to show. Prefer full_name from user_metadata (set by
+  // provision-teacher), then fall back to a generic Arabic label.
+  const displayName = user?.user_metadata?.full_name || 'المعلم';
   const todayLabel = new Date().toLocaleDateString('ar-SA', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   });
