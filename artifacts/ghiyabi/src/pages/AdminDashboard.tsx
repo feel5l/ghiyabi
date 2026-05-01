@@ -191,6 +191,9 @@ export default function AdminDashboard() {
             <Link to="/admin/classes" className="text-sm text-primary hover:underline font-medium hidden sm:block">
               الفصول
             </Link>
+            <Link to="/admin/sessions" className="text-sm text-primary hover:underline font-medium hidden sm:block">
+              الحصص
+            </Link>
             <button onClick={signOut} className="text-sm text-destructive hover:underline font-medium">
               خروج
             </button>
@@ -320,6 +323,9 @@ export default function AdminDashboard() {
           </Link>
           <Link to="/admin/classes" className="flex-1 min-h-[48px] flex items-center justify-center bg-card border border-border rounded-xl text-sm font-medium text-foreground hover:bg-muted transition-colors">
             🏫 الفصول
+          </Link>
+          <Link to="/admin/sessions" className="flex-1 min-h-[48px] flex items-center justify-center bg-card border border-border rounded-xl text-sm font-medium text-foreground hover:bg-muted transition-colors">
+            📋 الحصص
           </Link>
         </div>
       </main>

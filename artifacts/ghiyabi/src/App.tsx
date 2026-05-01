@@ -6,6 +6,7 @@ import SessionAttendance from './pages/SessionAttendance';
 import AdminDashboard from './pages/AdminDashboard';
 import Students from './pages/Students';
 import Classes from './pages/Classes';
+import AdminSessions from './pages/AdminSessions';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { useAuth } from './hooks/useAuth';
 
@@ -52,6 +53,11 @@ export default function App() {
         <Route path="/admin/classes" element={
           <ProtectedRoute requiredRole="admin">
             <Classes />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/sessions" element={
+          <ProtectedRoute requiredRole="admin">
+            <AdminSessions />
           </ProtectedRoute>
         } />
 
