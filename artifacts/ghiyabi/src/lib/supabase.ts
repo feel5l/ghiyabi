@@ -1,15 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string || '').trim().replace(/['"]/g, '');
+const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string || '').trim().replace(/['"]/g, '');
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Supabase env vars not set. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your .env file.');
+// Validate that the URL looks like a real Supabase URL
+const isValidUrl = supabaseUrl.startsWith('https://') || supabaseUrl.startsWith('http://');
+
+if (!isValidUrl || !supabaseAnonKey) {
+  console.warn(`Supabase config missing or invalid. URL: "${supabaseUrl}"`);
 }
 
 export const supabase = createClient(
-  supabaseUrl || 'https://placeholder.supabase.co',
-  supabaseAnonKey || 'placeholder'
+  isValidUrl ? supabaseUrl : 'https://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.supabase.co',
+  supabaseAnonKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder'
 );
 
 export type AttendanceStatus = 'Present' | 'Absent' | 'Late' | 'Excused';
