@@ -7,6 +7,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import Students from './pages/Students';
 import Classes from './pages/Classes';
 import AdminSessions from './pages/AdminSessions';
+import Teachers from './pages/Teachers';
 import NotFound from './pages/not-found';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthProvider, useAuth } from './hooks/useAuth';
@@ -44,7 +45,9 @@ function RootRedirect() {
   const { user, role, loading } = useAuth();
   if (loading) return <LoadingScreen />;
   if (!user) return <Navigate to="/login" replace />;
-  if (!role) return <LoadingScreen />;
+  // Authenticated user without a role (e.g. a deactivated teacher) gets sent
+  // back to the login screen rather than stuck on a spinner.
+  if (!role) return <Navigate to="/login" replace />;
   if (role === 'admin') return <Navigate to="/admin" replace />;
   return <Navigate to="/teacher" replace />;
 }
@@ -84,6 +87,11 @@ export default function App() {
         <Route path="/admin/students" element={
           <ProtectedRoute requiredRole="admin">
             <Students />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/teachers" element={
+          <ProtectedRoute requiredRole="admin">
+            <Teachers />
           </ProtectedRoute>
         } />
         <Route path="/admin/classes" element={

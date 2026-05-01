@@ -2,38 +2,58 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
-import type { Class } from '../lib/supabase';
+import type { Class, Teacher } from '../lib/supabase';
 import { SkeletonLine } from '../components/Skeleton';
 
+interface ClassWithTeacher extends Class {
+  teachers?: Pick<Teacher, 'id' | 'full_name' | 'phone'> | null;
+}
+
 export default function Classes() {
-  const [classes, setClasses] = useState<Class[]>([]);
+  const [classes, setClasses] = useState<ClassWithTeacher[]>([]);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editClass, setEditClass] = useState<Class | null>(null);
-  const [form, setForm] = useState({ name: '', grade_level: '', teacher_email: '' });
+  const [form, setForm] = useState({ name: '', grade_level: '', teacher_id: '' });
   const [saving, setSaving] = useState(false);
 
   const GRADE_OPTIONS = ['Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
 
-  useEffect(() => { loadClasses(); }, []);
+  useEffect(() => {
+    loadClasses();
+    loadTeachers();
+  }, []);
 
   async function loadClasses() {
     setLoading(true);
-    const { data, error } = await supabase.from('classes').select('*').order('grade_level, name');
+    const { data, error } = await supabase
+      .from('classes')
+      .select('*, teachers(id, full_name, phone)')
+      .order('grade_level, name');
     setLoading(false);
     if (error) toast.error('حدث خطأ في تحميل الفصول');
-    else setClasses((data as Class[]) || []);
+    else setClasses((data as ClassWithTeacher[]) || []);
+  }
+
+  async function loadTeachers() {
+    const { data } = await supabase
+      .from('teachers')
+      .select('id, full_name, phone, is_active')
+      .eq('is_active', true)
+      .order('full_name');
+    setTeachers((data as Teacher[]) || []);
   }
 
   function openAdd() {
     setEditClass(null);
-    setForm({ name: '', grade_level: GRADE_OPTIONS[0], teacher_email: '' });
+    setForm({ name: '', grade_level: GRADE_OPTIONS[0], teacher_id: '' });
     setShowForm(true);
   }
 
   function openEdit(cls: Class) {
     setEditClass(cls);
-    setForm({ name: cls.name, grade_level: cls.grade_level, teacher_email: cls.teacher_email || '' });
+    setForm({ name: cls.name, grade_level: cls.grade_level, teacher_id: cls.teacher_id || '' });
     setShowForm(true);
   }
 
@@ -44,7 +64,8 @@ export default function Classes() {
     const payload = {
       name: form.name.trim(),
       grade_level: form.grade_level,
-      teacher_email: form.teacher_email.trim() || null,
+      teacher_id: form.teacher_id || null,
+      teacher_email: null as string | null,
     };
     if (editClass) {
       const { error } = await supabase.from('classes').update(payload).eq('id', editClass.id);
@@ -113,13 +134,19 @@ export default function Classes() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1.5">بريد المعلم</label>
-                  <input
-                    type="email"
-                    value={form.teacher_email}
-                    onChange={(e) => setForm(f => ({ ...f, teacher_email: e.target.value }))}
+                  <label className="block text-sm font-medium mb-1.5">المعلم المسؤول</label>
+                  <select
+                    value={form.teacher_id}
+                    onChange={(e) => setForm((f) => ({ ...f, teacher_id: e.target.value }))}
                     className="w-full h-11 px-3 border border-input rounded-xl bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  />
+                  >
+                    <option value="">— بدون معلم —</option>
+                    {teachers.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.full_name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="flex gap-3 pt-2">
                   <button type="submit" disabled={saving} className="flex-1 min-h-[48px] bg-primary text-primary-foreground rounded-xl font-bold hover:opacity-90 disabled:opacity-50">
@@ -153,8 +180,10 @@ export default function Classes() {
                     <div key={cls.id} className="flex items-center justify-between px-4 py-3">
                       <div>
                         <p className="font-semibold">{grade} — {cls.name}</p>
-                        {cls.teacher_email && (
-                          <p className="text-xs text-muted-foreground mt-0.5">{cls.teacher_email}</p>
+                        {cls.teachers?.full_name && (
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {cls.teachers.full_name}
+                          </p>
                         )}
                       </div>
                       <div className="flex items-center gap-3">

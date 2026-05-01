@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
-import type { Class, Session } from '../lib/supabase';
+import type { Class, Session, Teacher } from '../lib/supabase';
+import { formatSaudiPhone } from '../lib/teacherAuth';
 import { SkeletonLine } from '../components/Skeleton';
 
 const PERIOD_OPTIONS = ['P1', 'P2', 'P3', 'P4', 'P5', 'P6'];
@@ -22,7 +23,7 @@ interface SessionWithClass extends Session {
 
 interface FormState {
   class_id: string;
-  teacher_email: string;
+  teacher_id: string;
   subject: string;
   period: string;
   date: string;
@@ -35,6 +36,7 @@ function today() {
 export default function AdminSessions() {
   const [sessions, setSessions] = useState<SessionWithClass[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editSession, setEditSession] = useState<SessionWithClass | null>(null);
@@ -43,7 +45,7 @@ export default function AdminSessions() {
 
   const emptyForm = (): FormState => ({
     class_id: classes[0]?.id || '',
-    teacher_email: '',
+    teacher_id: '',
     subject: '',
     period: 'P1',
     date: today(),
@@ -53,6 +55,7 @@ export default function AdminSessions() {
 
   useEffect(() => {
     loadClasses();
+    loadTeachers();
   }, []);
 
   useEffect(() => {
@@ -71,11 +74,21 @@ export default function AdminSessions() {
     }
   }
 
+  async function loadTeachers() {
+    const { data, error } = await supabase
+      .from('teachers')
+      .select('id, full_name, phone, is_active')
+      .eq('is_active', true)
+      .order('full_name');
+    if (error) toast.error('حدث خطأ في تحميل المعلمين');
+    else setTeachers((data as Teacher[]) || []);
+  }
+
   async function loadSessions() {
     setLoading(true);
     const { data, error } = await supabase
       .from('sessions')
-      .select('*, classes(id, name, grade_level, teacher_email)')
+      .select('*, classes(id, name, grade_level, teacher_id), teachers(id, full_name, phone)')
       .eq('date', dateFilter)
       .order('period');
     setLoading(false);
@@ -86,10 +99,10 @@ export default function AdminSessions() {
   function openAdd() {
     setEditSession(null);
     const defaultClass = classes[0]?.id || '';
-    const defaultEmail = classes[0]?.teacher_email || '';
+    const defaultTeacher = classes[0]?.teacher_id || '';
     setForm({
       class_id: defaultClass,
-      teacher_email: defaultEmail,
+      teacher_id: defaultTeacher,
       subject: '',
       period: 'P1',
       date: dateFilter,
@@ -101,7 +114,7 @@ export default function AdminSessions() {
     setEditSession(sess);
     setForm({
       class_id: sess.class_id || '',
-      teacher_email: sess.teacher_email,
+      teacher_id: sess.teacher_id || '',
       subject: sess.subject,
       period: sess.period,
       date: sess.date,
@@ -110,24 +123,25 @@ export default function AdminSessions() {
   }
 
   function handleClassChange(classId: string) {
-    const cls = classes.find(c => c.id === classId);
-    setForm(f => ({
+    const cls = classes.find((c) => c.id === classId);
+    setForm((f) => ({
       ...f,
       class_id: classId,
-      teacher_email: cls?.teacher_email || f.teacher_email,
+      teacher_id: cls?.teacher_id || f.teacher_id,
     }));
   }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.class_id || !form.teacher_email.trim() || !form.subject.trim() || !form.period || !form.date) {
+    if (!form.class_id || !form.teacher_id || !form.subject.trim() || !form.period || !form.date) {
       toast.error('يرجى ملء جميع الحقول المطلوبة');
       return;
     }
     setSaving(true);
     const payload = {
       class_id: form.class_id,
-      teacher_email: form.teacher_email.trim().toLowerCase(),
+      teacher_id: form.teacher_id,
+      teacher_email: null,
       subject: form.subject.trim(),
       period: form.period,
       date: form.date,
@@ -241,18 +255,27 @@ export default function AdminSessions() {
                   </select>
                 </div>
 
-                {/* Teacher email */}
+                {/* Teacher selector */}
                 <div>
-                  <label className="block text-sm font-medium mb-1.5">بريد المعلم *</label>
-                  <input
-                    type="email"
-                    value={form.teacher_email}
-                    onChange={(e) => setForm(f => ({ ...f, teacher_email: e.target.value }))}
-                    placeholder="teacher@school.edu"
+                  <label className="block text-sm font-medium mb-1.5">المعلم *</label>
+                  <select
+                    value={form.teacher_id}
+                    onChange={(e) => setForm((f) => ({ ...f, teacher_id: e.target.value }))}
                     required
                     className="w-full h-11 px-3 border border-input rounded-xl bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                    dir="ltr"
-                  />
+                  >
+                    <option value="">-- اختر المعلم --</option>
+                    {teachers.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.full_name} — {formatSaudiPhone(t.phone)}
+                      </option>
+                    ))}
+                  </select>
+                  {teachers.length === 0 && (
+                    <p className="text-xs text-yellow-700 mt-1.5">
+                      لا يوجد معلمون نشطون. أضف معلماً أولاً.
+                    </p>
+                  )}
                 </div>
 
                 {/* Subject */}
@@ -354,7 +377,7 @@ export default function AdminSessions() {
                             </td>
                             <td className="px-4 py-3 font-medium">{sess.subject}</td>
                             <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell text-xs">
-                              {sess.teacher_email}
+                              {sess.teachers?.full_name ?? sess.teacher_email ?? '—'}
                             </td>
                             <td className="px-4 py-3 text-center">
                               <div className="flex items-center justify-center gap-3">
@@ -397,7 +420,9 @@ export default function AdminSessions() {
                             {sess.period}
                           </span>
                           <span className="font-medium">{sess.subject}</span>
-                          <span className="text-xs text-muted-foreground mr-2">{sess.teacher_email}</span>
+                          <span className="text-xs text-muted-foreground mr-2">
+                            {sess.teachers?.full_name ?? sess.teacher_email ?? '—'}
+                          </span>
                         </div>
                         <div className="flex items-center gap-3">
                           <button onClick={() => openEdit(sess)} className="text-primary hover:underline text-xs font-medium">تعديل</button>
