@@ -1,6 +1,7 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import type { UserRole } from '../hooks/useAuth';
+import { supabase } from '../lib/supabase';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -22,6 +23,13 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
   }
 
   if (!user) return <Navigate to="/login" replace />;
+
+  if (!role) {
+    // Authenticated but no role (e.g. a deactivated teacher). Sign out
+    // immediately and bounce to the login screen with a clear message.
+    void supabase.auth.signOut();
+    return <Navigate to="/login" replace />;
+  }
 
   if (role !== requiredRole) {
     return <Navigate to={role === 'admin' ? '/admin' : '/teacher'} replace />;

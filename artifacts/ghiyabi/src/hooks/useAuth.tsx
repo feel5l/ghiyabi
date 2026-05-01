@@ -13,17 +13,35 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | null>(null);
 
-async function checkRole(email: string): Promise<UserRole> {
+// Resolves the current user's role.
+// - Admin if there is a row in `admins` matching the user's email.
+// - Teacher if there is an active row in `teachers` matching the user's id.
+// - null otherwise (e.g. a deactivated teacher) so the UI can show a clear
+//   "your account is disabled" screen instead of a broken dashboard.
+async function checkRole(userId: string, email: string | null | undefined): Promise<UserRole> {
+  if (email) {
+    try {
+      const { data } = await supabase
+        .from('admins')
+        .select('email')
+        .eq('email', email)
+        .maybeSingle();
+      if (data) return 'admin';
+    } catch {
+      // fall through to teacher check
+    }
+  }
   try {
     const { data } = await supabase
-      .from('admins')
-      .select('email')
-      .eq('email', email)
+      .from('teachers')
+      .select('id, is_active')
+      .eq('id', userId)
       .maybeSingle();
-    return data ? 'admin' : 'teacher';
+    if (data?.is_active) return 'teacher';
   } catch {
-    return 'teacher';
+    // ignore — treat as no role
   }
+  return null;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -45,8 +63,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setTimeout(async () => {
         if (cancelled) return;
         try {
-          if (u?.email) {
-            const r = await checkRole(u.email);
+          if (u) {
+            const r = await checkRole(u.id, u.email);
             if (cancelled) return;
             setRole(r);
           } else {

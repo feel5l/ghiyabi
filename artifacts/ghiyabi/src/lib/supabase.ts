@@ -18,11 +18,20 @@ export const supabase = createClient(
 
 export type AttendanceStatus = 'Present' | 'Absent' | 'Late' | 'Excused';
 
+export interface Teacher {
+  id: string;
+  full_name: string;
+  phone: string;
+  is_active: boolean;
+}
+
 export interface Class {
   id: string;
   name: string;
   grade_level: string;
   teacher_email: string | null;
+  teacher_id: string | null;
+  teachers?: Pick<Teacher, 'id' | 'full_name' | 'phone'> | null;
 }
 
 export interface Student {
@@ -40,8 +49,10 @@ export interface Session {
   period: string;
   subject: string;
   class_id: string | null;
-  teacher_email: string;
+  teacher_email: string | null;
+  teacher_id: string | null;
   classes?: Class;
+  teachers?: Pick<Teacher, 'id' | 'full_name' | 'phone'> | null;
 }
 
 export interface AttendanceLog {
