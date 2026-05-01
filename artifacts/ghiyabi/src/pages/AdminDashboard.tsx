@@ -75,17 +75,20 @@ export default function AdminDashboard() {
 
       const sessionIds = sessions?.map(s => s.id) || [];
 
+      // Count UNIQUE absent students (a student absent in multiple sessions counts once)
       let absentToday = 0;
       if (sessionIds.length > 0) {
-        const { count } = await supabase
+        const { data: absentLogs } = await supabase
           .from('attendance_log')
-          .select('*', { count: 'exact', head: true })
+          .select('student_id')
           .in('session_id', sessionIds)
           .eq('status', 'Absent');
-        absentToday = count || 0;
+        const uniqueAbsent = new Set((absentLogs || []).map(l => l.student_id));
+        absentToday = uniqueAbsent.size;
       }
 
       const total = totalStudents || 0;
+      // Percentage of students absent at least once today vs total students in class
       const pct = total > 0 ? (absentToday / total) * 100 : 0;
 
       return {
@@ -231,7 +234,7 @@ export default function AdminDashboard() {
                     <th className="px-4 py-3 text-right font-semibold text-foreground">الفصل</th>
                     <th className="px-4 py-3 text-center font-semibold text-foreground">الطلاب</th>
                     <th className="px-4 py-3 text-center font-semibold text-foreground">غائب اليوم</th>
-                    <th className="px-4 py-3 text-center font-semibold text-foreground">نسبة الغياب</th>
+                    <th className="px-4 py-3 text-center font-semibold text-foreground" title="نسبة الطلاب الغائبين مرة واحدة على الأقل اليوم">نسبة الغياب *</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -264,6 +267,7 @@ export default function AdminDashboard() {
               </table>
             </div>
           </div>
+          <p className="text-xs text-muted-foreground mt-2 px-1">* نسبة الطلاب الغائبين (مرة واحدة على الأقل) من إجمالي طلاب الفصل</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

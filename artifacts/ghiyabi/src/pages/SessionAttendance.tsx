@@ -68,9 +68,13 @@ export default function SessionAttendance() {
 
     const existingLogs = (logData as AttendanceLog[]) || [];
 
-    if (existingLogs.length === 0 && studentList.length > 0) {
-      // Auto-initialize: create Present rows for all active students
-      await initializeAttendance(id!, studentList);
+    // Find students who don't have an attendance log yet (handles newly added students)
+    const loggedStudentIds = new Set(existingLogs.map((l) => l.student_id));
+    const unloggedStudents = studentList.filter((s) => !loggedStudentIds.has(s.id));
+
+    if (unloggedStudents.length > 0) {
+      // Initialize only the missing students as Present
+      await initializeAttendance(id!, unloggedStudents, existingLogs);
     } else {
       setLogs(existingLogs);
     }
@@ -78,9 +82,13 @@ export default function SessionAttendance() {
     setLoading(false);
   }
 
-  async function initializeAttendance(sessionId: string, studentList: Student[]) {
+  async function initializeAttendance(
+    sessionId: string,
+    unloggedStudents: Student[],
+    existingLogs: AttendanceLog[],
+  ) {
     setInitializing(true);
-    const rows = studentList.map((s) => ({
+    const rows = unloggedStudents.map((s) => ({
       student_id: s.id,
       session_id: sessionId,
       status: 'Present' as const,
@@ -94,9 +102,13 @@ export default function SessionAttendance() {
     setInitializing(false);
     if (error) {
       toast.error('حدث خطأ في تهيئة سجل الحضور');
+      setLogs(existingLogs);
     } else {
-      setLogs((data as AttendanceLog[]) || []);
-      toast.success('تم تهيئة سجل الحضور — جميع الطلاب حاضرون افتراضياً');
+      const newLogs = (data as AttendanceLog[]) || [];
+      setLogs([...existingLogs, ...newLogs]);
+      if (existingLogs.length === 0) {
+        toast.success('تم تهيئة سجل الحضور — جميع الطلاب حاضرون افتراضياً');
+      }
     }
   }
 
