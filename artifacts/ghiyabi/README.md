@@ -8,7 +8,7 @@ A school attendance tracking system built with React + Vite + Supabase.
 
 ## Tech Stack
 
-- **Frontend**: React 18 + Vite + TypeScript + Tailwind CSS
+- **Frontend**: React + Vite + TypeScript + Tailwind CSS
 - **Backend**: Supabase (PostgreSQL + Auth + Edge Functions)
 - **Email**: Resend API (via Supabase Edge Function)
 - **Hosting**: Netlify (static frontend)

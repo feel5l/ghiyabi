@@ -3,15 +3,16 @@
 # This file is kept as a reference for standalone deployments only.
 #
 # For standalone deployment (if pushing only artifacts/ghiyabi/ to GitHub):
-# - Build command: npm install && npm run build
+# - Build command: pnpm install && pnpm run build
 # - Publish directory: dist/public
 
 [build]
-  command = "npm install && npm run build"
+  command = "pnpm install && pnpm run build"
   publish = "dist/public"
 
 [build.environment]
   NODE_VERSION = "22"
+  PNPM_VERSION = "10"
 
 [[redirects]]
   from = "/*"

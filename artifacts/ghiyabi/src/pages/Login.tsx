@@ -8,6 +8,9 @@ function getAuthRedirectUrl() {
   return new URL(import.meta.env.BASE_URL, window.location.origin).toString();
 }
 
+const configurationErrorMessage =
+  supabaseConfigError || 'إعدادات Supabase غير مكتملة.';
+
 export default function Login() {
   const { user, role, loading, authError } = useAuth();
   const [email, setEmail] = useState('');
@@ -21,7 +24,7 @@ export default function Login() {
   async function handleEmailLogin(e: React.FormEvent) {
     e.preventDefault();
     if (!isSupabaseConfigured) {
-      toast.error(supabaseConfigError);
+      toast.error(configurationErrorMessage);
       return;
     }
     if (!email || !password) {
@@ -38,7 +41,7 @@ export default function Login() {
 
   async function handleGoogleLogin() {
     if (!isSupabaseConfigured) {
-      toast.error(supabaseConfigError);
+      toast.error(configurationErrorMessage);
       return;
     }
     const { error } = await supabase.auth.signInWithOAuth({
@@ -64,7 +67,7 @@ export default function Login() {
         <div className="bg-card border border-card-border rounded-2xl shadow-lg p-6 space-y-5">
           {!isSupabaseConfigured && (
             <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              {supabaseConfigError}
+              {configurationErrorMessage}
             </div>
           )}
 

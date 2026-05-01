@@ -83,9 +83,9 @@ export default function SessionAttendance() {
     const loggedStudentIds = new Set(existingLogs.map((l) => l.student_id));
     const unloggedStudents = studentList.filter((s) => !loggedStudentIds.has(s.id));
 
-    if (unloggedStudents.length > 0) {
+    if (unloggedStudents.length > 0 && id) {
       // Initialize only the missing students as Present
-      await initializeAttendance(id!, unloggedStudents, existingLogs);
+      await initializeAttendance(id, unloggedStudents, existingLogs);
     } else {
       setLogs(existingLogs);
     }
