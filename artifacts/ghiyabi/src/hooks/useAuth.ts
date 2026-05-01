@@ -3,44 +3,54 @@ import { supabase } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
 
 export type UserRole = 'admin' | 'teacher' | null;
+export type AuthError = 'missing-email' | 'role-check-failed' | null;
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<UserRole>(null);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState<AuthError>(null);
 
   async function checkRole(email: string): Promise<UserRole> {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('admins')
       .select('email')
       .eq('email', email)
       .maybeSingle();
+    if (error) throw error;
     return data ? 'admin' : 'teacher';
+  }
+
+  async function applySessionUser(u: User | null) {
+    setUser(u);
+    setRole(null);
+    setAuthError(null);
+
+    if (!u) return;
+    if (!u.email) {
+      setAuthError('missing-email');
+      return;
+    }
+
+    try {
+      const r = await checkRole(u.email);
+      setRole(r);
+    } catch (error) {
+      console.error('Failed to check user role', error);
+      setAuthError('role-check-failed');
+    }
   }
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
-      const u = session?.user ?? null;
-      setUser(u);
-      if (u?.email) {
-        const r = await checkRole(u.email);
-        setRole(r);
-      }
+      await applySessionUser(session?.user ?? null);
       setLoading(false);
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const u = session?.user ?? null;
-      setUser(u);
-      if (u?.email) {
-        setLoading(true);
-        const r = await checkRole(u.email);
-        setRole(r);
-        setLoading(false);
-      } else {
-        setRole(null);
-        setLoading(false);
-      }
+      setLoading(true);
+      await applySessionUser(session?.user ?? null);
+      setLoading(false);
     });
 
     return () => listener.subscription.unsubscribe();
@@ -50,5 +60,5 @@ export function useAuth() {
     await supabase.auth.signOut();
   }
 
-  return { user, role, loading, signOut };
+  return { user, role, loading, authError, signOut };
 }

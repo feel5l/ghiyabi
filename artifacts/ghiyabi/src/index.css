@@ -1,6 +1,3 @@
-/* Arabic font — must come before tailwindcss @import */
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap');
-
 @import "tailwindcss";
 @import "tw-animate-css";
 @plugin "@tailwindcss/typography";

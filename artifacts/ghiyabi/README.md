@@ -63,8 +63,8 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 ### 5. Test Locally
 
 ```bash
-npm install
-npm run dev
+pnpm install
+pnpm --filter @workspace/ghiyabi run dev
 ```
 
 Open `http://localhost:5173`

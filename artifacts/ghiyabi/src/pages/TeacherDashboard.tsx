@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -48,7 +47,7 @@ export default function TeacherDashboard() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-2">
-          <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
           <p className="text-muted-foreground text-sm">جارٍ التحقق من الهوية...</p>
         </div>
       </div>

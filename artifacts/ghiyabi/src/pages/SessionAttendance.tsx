@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
-import { useAuth } from '../hooks/useAuth';
 import type { Session, Student, AttendanceLog } from '../lib/supabase';
 import { AttendanceRow } from '../components/AttendanceRow';
 import { SkeletonRow } from '../components/Skeleton';
@@ -19,7 +18,6 @@ const PERIOD_LABELS: Record<string, string> = {
 export default function SessionAttendance() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
 
   const [session, setSession] = useState<Session | null>(null);
   const [logs, setLogs] = useState<AttendanceLog[]>([]);
@@ -50,21 +48,34 @@ export default function SessionAttendance() {
     setSession(sess);
 
     // Load active students in this class
-    const { data: studentData } = await supabase
+    const { data: studentData, error: studentError } = await supabase
       .from('students')
       .select('*')
       .eq('class_id', sess.class_id)
       .eq('is_active', true)
       .order('full_name');
 
+    if (studentError) {
+      toast.error(`تعذر تحميل قائمة الطلاب: ${studentError.message}`);
+      setLoading(false);
+      return;
+    }
+
     const studentList = (studentData as Student[]) || [];
     setStudents(studentList);
 
     // Load existing attendance logs
-    const { data: logData } = await supabase
+    const { data: logData, error: logError } = await supabase
       .from('attendance_log')
       .select('*')
       .eq('session_id', id);
+
+    if (logError) {
+      toast.error(`تعذر تحميل سجل الحضور: ${logError.message}`);
+      setLogs([]);
+      setLoading(false);
+      return;
+    }
 
     const existingLogs = (logData as AttendanceLog[]) || [];
 
@@ -96,16 +107,29 @@ export default function SessionAttendance() {
 
     const { data, error } = await supabase
       .from('attendance_log')
-      .insert(rows)
+      .upsert(rows, {
+        onConflict: 'student_id,session_id',
+        ignoreDuplicates: true,
+      })
       .select();
 
     setInitializing(false);
     if (error) {
-      toast.error('حدث خطأ في تهيئة سجل الحضور');
+      toast.error(`حدث خطأ في تهيئة سجل الحضور: ${error.message}`);
       setLogs(existingLogs);
     } else {
-      const newLogs = (data as AttendanceLog[]) || [];
-      setLogs([...existingLogs, ...newLogs]);
+      const insertedLogs = (data as AttendanceLog[]) || [];
+      const { data: refreshedLogs, error: refreshError } = await supabase
+        .from('attendance_log')
+        .select('*')
+        .eq('session_id', sessionId);
+
+      if (refreshError) {
+        toast.error(`تمت التهيئة لكن تعذر تحديث القائمة: ${refreshError.message}`);
+        setLogs([...existingLogs, ...insertedLogs]);
+      } else {
+        setLogs((refreshedLogs as AttendanceLog[]) || []);
+      }
       if (existingLogs.length === 0) {
         toast.success('تم تهيئة سجل الحضور — جميع الطلاب حاضرون افتراضياً');
       }

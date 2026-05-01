@@ -5,8 +5,12 @@ const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string || '')
 
 // Validate that the URL looks like a real Supabase URL
 const isValidUrl = supabaseUrl.startsWith('https://') || supabaseUrl.startsWith('http://');
+export const isSupabaseConfigured = isValidUrl && Boolean(supabaseAnonKey);
+export const supabaseConfigError = isSupabaseConfigured
+  ? null
+  : 'إعدادات Supabase غير مكتملة. تأكد من ضبط VITE_SUPABASE_URL و VITE_SUPABASE_ANON_KEY.';
 
-if (!isValidUrl || !supabaseAnonKey) {
+if (!isSupabaseConfigured) {
   console.warn(`Supabase config missing or invalid. URL: "${supabaseUrl}"`);
 }
 

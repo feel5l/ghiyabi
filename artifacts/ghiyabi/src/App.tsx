@@ -7,8 +7,10 @@ import AdminDashboard from './pages/AdminDashboard';
 import Students from './pages/Students';
 import Classes from './pages/Classes';
 import AdminSessions from './pages/AdminSessions';
+import NotFound from './pages/not-found';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { useAuth } from './hooks/useAuth';
+import { supabaseConfigError } from './lib/supabase';
 
 function LoadingScreen() {
   return (
@@ -19,16 +21,37 @@ function LoadingScreen() {
 }
 
 function RootRedirect() {
-  const { user, role, loading } = useAuth();
+  const { user, role, loading, authError } = useAuth();
   if (loading) return <LoadingScreen />;
   if (!user) return <Navigate to="/login" replace />;
-  if (!role) return <LoadingScreen />;
+  if (authError || !role) return <Navigate to="/login" replace />;
   if (role === 'admin') return <Navigate to="/admin" replace />;
   return <Navigate to="/teacher" replace />;
 }
 
+function ConfigurationError() {
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="w-full max-w-lg rounded-2xl border border-destructive/30 bg-card p-6 text-center shadow-lg">
+        <h1 className="text-2xl font-bold text-destructive mb-3">إعدادات التطبيق غير مكتملة</h1>
+        <p className="text-sm leading-7 text-muted-foreground">
+          {supabaseConfigError}
+        </p>
+        <p className="text-xs leading-6 text-muted-foreground mt-4">
+          انسخ ملف <span dir="ltr" className="font-mono">.env.example</span> إلى{' '}
+          <span dir="ltr" className="font-mono">.env</span> ثم أعد تشغيل التطبيق.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+
+  if (supabaseConfigError) {
+    return <ConfigurationError />;
+  }
 
   return (
     <BrowserRouter basename={base}>
@@ -70,7 +93,7 @@ export default function App() {
           </ProtectedRoute>
         } />
 
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
       <Toaster
         position="top-center"
