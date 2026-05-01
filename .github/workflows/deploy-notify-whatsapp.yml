@@ -1,0 +1,72 @@
+# Deploy Edge Function notify-whatsapp + set Supabase secrets (manual trigger).
+#
+# Required GitHub repository secrets:
+#   SUPABASE_ACCESS_TOKEN   — from https://supabase.com/dashboard/account/tokens
+#   SUPABASE_PROJECT_REF    — Project Settings → General → Reference ID
+#   WHATSAPP_ACCESS_TOKEN   — Meta WhatsApp Cloud API permanent token
+#   WHATSAPP_PHONE_NUMBER_ID
+# Optional:
+#   NOTIFY_WEBHOOK_SECRET   — same value as DB webhook Authorization Bearer (if you use webhook)
+#   WHATSAPP_GRAPH_API_VERSION — e.g. v21.0 (omit to keep default in function code)
+#
+# Supabase injects SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY at runtime;
+# you do not set those manually for hosted functions.
+
+name: Deploy notify-whatsapp (Supabase)
+
+on:
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: artifacts/ghiyabi
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Set Supabase secrets
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          WHATSAPP_ACCESS_TOKEN: ${{ secrets.WHATSAPP_ACCESS_TOKEN }}
+          WHATSAPP_PHONE_NUMBER_ID: ${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}
+          NOTIFY_WEBHOOK_SECRET: ${{ secrets.NOTIFY_WEBHOOK_SECRET }}
+          WHATSAPP_GRAPH_API_VERSION: ${{ secrets.WHATSAPP_GRAPH_API_VERSION }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_ACCESS_TOKEN:-}" ] || [ -z "${SUPABASE_PROJECT_REF:-}" ]; then
+            echo "Missing SUPABASE_ACCESS_TOKEN or SUPABASE_PROJECT_REF repository secrets."
+            exit 1
+          fi
+          if [ -z "${WHATSAPP_ACCESS_TOKEN:-}" ] || [ -z "${WHATSAPP_PHONE_NUMBER_ID:-}" ]; then
+            echo "Missing WHATSAPP_ACCESS_TOKEN or WHATSAPP_PHONE_NUMBER_ID repository secrets."
+            exit 1
+          fi
+          ARGS=(
+            "WHATSAPP_ACCESS_TOKEN=${WHATSAPP_ACCESS_TOKEN}"
+            "WHATSAPP_PHONE_NUMBER_ID=${WHATSAPP_PHONE_NUMBER_ID}"
+          )
+          if [ -n "${NOTIFY_WEBHOOK_SECRET:-}" ]; then
+            ARGS+=("NOTIFY_WEBHOOK_SECRET=${NOTIFY_WEBHOOK_SECRET}")
+          fi
+          if [ -n "${WHATSAPP_GRAPH_API_VERSION:-}" ]; then
+            ARGS+=("WHATSAPP_GRAPH_API_VERSION=${WHATSAPP_GRAPH_API_VERSION}")
+          fi
+          supabase secrets set "${ARGS[@]}" --project-ref "$SUPABASE_PROJECT_REF"
+
+      - name: Deploy Edge Function notify-whatsapp
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          set -euo pipefail
+          supabase functions deploy notify-whatsapp --project-ref "$SUPABASE_PROJECT_REF"

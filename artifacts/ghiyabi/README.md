@@ -106,6 +106,45 @@ After deploying, set up the Database Webhook in Supabase:
 
 > **Security note:** The `NOTIFY_WEBHOOK_SECRET` is a private shared secret that protects this endpoint from unauthorized calls. Never use your Supabase anon key here — the anon key is public and would allow anyone to trigger email sends with forged data.
 
+### WhatsApp Edge Function (`notify-whatsapp`)
+
+Sends template messages via Meta WhatsApp Cloud API when a student is absent (from the app or optionally via a second Database Webhook).
+
+**Secrets you set** (Dashboard → Edge Functions → Secrets, or CLI / workflow below):
+
+| Secret | Required | Purpose |
+|--------|----------|---------|
+| `WHATSAPP_ACCESS_TOKEN` | Yes | Meta permanent token |
+| `WHATSAPP_PHONE_NUMBER_ID` | Yes | WhatsApp Business phone number ID |
+| `NOTIFY_WEBHOOK_SECRET` | Optional | Same Bearer secret if you add a webhook to `notify-whatsapp` |
+| `WHATSAPP_GRAPH_API_VERSION` | Optional | e.g. `v21.0` (function defaults if omitted) |
+
+Supabase provides **`SUPABASE_URL`**, **`SUPABASE_ANON_KEY`**, and **`SUPABASE_SERVICE_ROLE_KEY`** automatically for deployed functions — do not paste the service role into GitHub.
+
+**Option A — GitHub Actions (recommended if you cannot run CLI locally)**
+
+1. Repo → **Settings → Secrets and variables → Actions** → add:
+   - `SUPABASE_ACCESS_TOKEN` — [Account tokens](https://supabase.com/dashboard/account/tokens)
+   - `SUPABASE_PROJECT_REF` — Project Settings → General → Reference ID
+   - `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`
+   - Optionally: `NOTIFY_WEBHOOK_SECRET`, `WHATSAPP_GRAPH_API_VERSION`
+2. Run workflow **Deploy notify-whatsapp (Supabase)** manually (**Actions** tab).
+
+**Option B — Shell script**
+
+```bash
+cd artifacts/ghiyabi
+cp .env.supabase.example .env.supabase   # fill in, then:
+set -a && source .env.supabase && set +a && ./scripts/deploy-notify-whatsapp.sh
+```
+
+Or export `SUPABASE_PROJECT_REF`, `WHATSAPP_*`, and run `./scripts/deploy-notify-whatsapp.sh` after `supabase login`.
+
+**Optional webhook** (in addition to email `notify-absent`): Database → Webhooks → table `attendance_log`, URL  
+`https://<project-ref>.supabase.co/functions/v1/notify-whatsapp`, header `Authorization: Bearer <NOTIFY_WEBHOOK_SECRET>`.
+
+Meta: create approved template **`absent_notification`** (Arabic) with body parameters: student name, date, subject, class name.
+
 ### 7. Push to GitHub
 
 1. In Replit, open the **Git** tab (left sidebar)
