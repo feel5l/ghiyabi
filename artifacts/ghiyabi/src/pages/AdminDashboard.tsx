@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { FaWhatsapp } from 'react-icons/fa';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
+import { useWhatsApp } from '../hooks/useWhatsApp';
 import { KpiCard } from '../components/KpiCard';
 import { SkeletonKpi, SkeletonLine } from '../components/Skeleton';
 
@@ -30,13 +32,30 @@ interface TopAbsentee {
   absent_count: number;
 }
 
+interface AbsentTodayRow {
+  student_id: string;
+  session_id: string;
+  full_name: string;
+  subject: string;
+  class_name: string;
+}
+
 export default function AdminDashboard() {
-  const { user, signOut } = useAuth();
+  const { signOut } = useAuth();
   const [classStats, setClassStats] = useState<ClassStats[]>([]);
   const [notStarted, setNotStarted] = useState<SessionNotStarted[]>([]);
   const [topAbsentees, setTopAbsentees] = useState<TopAbsentee[]>([]);
+  const [absentToday, setAbsentToday] = useState<AbsentTodayRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0]);
+  const [bulkWhatsAppRunning, setBulkWhatsAppRunning] = useState(false);
+  const [whatsAppSentKeys, setWhatsAppSentKeys] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const { notify, isSending } = useWhatsApp();
+
+  const waRowKey = (studentId: string, sessionId: string) =>
+    `${studentId}:${sessionId}`;
 
   const totalStudents = classStats.reduce((a, c) => a + c.total_students, 0);
   const totalAbsent = classStats.reduce((a, c) => a + c.absent_today, 0);
@@ -47,7 +66,12 @@ export default function AdminDashboard() {
 
   async function fetchData() {
     setLoading(true);
-    await Promise.all([fetchClassStats(), fetchNotStarted(), fetchTopAbsentees()]);
+    await Promise.all([
+      fetchClassStats(),
+      fetchNotStarted(),
+      fetchTopAbsentees(),
+      fetchAbsentToday(),
+    ]);
     setLoading(false);
   }
 
@@ -169,6 +193,81 @@ export default function AdminDashboard() {
     setTopAbsentees(sorted);
   }
 
+  async function fetchAbsentToday() {
+    const { data: sessions } = await supabase
+      .from('sessions')
+      .select('id')
+      .eq('date', dateFilter);
+
+    const sessionIds = sessions?.map((s) => s.id) || [];
+    if (sessionIds.length === 0) {
+      setAbsentToday([]);
+      return;
+    }
+
+    const { data: logs } = await supabase
+      .from('attendance_log')
+      .select(
+        'student_id, session_id, students(full_name), sessions(subject, classes(name))',
+      )
+      .in('session_id', sessionIds)
+      .eq('status', 'Absent');
+
+    const rows: AbsentTodayRow[] = (logs || []).map((log) => {
+      const st = log.students as unknown as { full_name: string } | null;
+      const sess = log.sessions as unknown as {
+        subject: string;
+        classes?: { name: string };
+      } | null;
+      return {
+        student_id: log.student_id,
+        session_id: log.session_id,
+        full_name: st?.full_name || '—',
+        subject: sess?.subject || '—',
+        class_name: sess?.classes?.name || '—',
+      };
+    });
+
+    rows.sort((a, b) =>
+      a.full_name.localeCompare(b.full_name, 'ar'),
+    );
+    setAbsentToday(rows);
+  }
+
+  const handleAdminWhatsApp = useCallback(
+    async (studentId: string, sessionId: string, name: string) => {
+      const result = await notify(studentId, sessionId, name);
+      if (result.ok && !result.skipped) {
+        setWhatsAppSentKeys((prev) =>
+          new Set(prev).add(waRowKey(studentId, sessionId)),
+        );
+      }
+    },
+    [notify],
+  );
+
+  async function sendAllWhatsApp() {
+    if (absentToday.length === 0 || bulkWhatsAppRunning) return;
+    toast(
+      'جاري إرسال رسائل واتساب لجميع الغائبين (قد يستغرق ذلك بعض الوقت)...',
+      { duration: 4000, icon: '📱' },
+    );
+    setBulkWhatsAppRunning(true);
+    try {
+      for (const row of absentToday) {
+        await handleAdminWhatsApp(
+          row.student_id,
+          row.session_id,
+          row.full_name,
+        );
+        await new Promise((r) => setTimeout(r, 500));
+      }
+      toast.success('تمت محاولة الإرسال لجميع الغائبين.');
+    } finally {
+      setBulkWhatsAppRunning(false);
+    }
+  }
+
   function rowColor(pct: number) {
     if (pct < 5) return 'bg-green-50';
     if (pct <= 10) return 'bg-yellow-50';
@@ -271,6 +370,85 @@ export default function AdminDashboard() {
             </div>
           </div>
           <p className="text-xs text-muted-foreground mt-2 px-1">* نسبة الطلاب الغائبين (مرة واحدة على الأقل) من إجمالي طلاب الفصل</p>
+        </div>
+
+        {/* Absent students today — WhatsApp */}
+        <div>
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+            <h2 className="text-lg font-bold">الطلاب الغائبون اليوم</h2>
+            <button
+              type="button"
+              onClick={sendAllWhatsApp}
+              disabled={
+                bulkWhatsAppRunning ||
+                loading ||
+                absentToday.length === 0
+              }
+              className="min-h-[40px] px-4 rounded-xl bg-emerald-500 text-white text-sm font-semibold hover:bg-emerald-600 disabled:opacity-50 disabled:pointer-events-none transition-colors"
+            >
+              إرسال الكل عبر واتساب
+            </button>
+          </div>
+          <div className="bg-card border border-card-border rounded-xl shadow-sm divide-y divide-border overflow-hidden">
+            {loading ? (
+              <div className="px-4 py-6 space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <SkeletonLine key={i} height="h-4" />
+                ))}
+              </div>
+            ) : absentToday.length === 0 ? (
+              <div className="text-center py-10 text-muted-foreground text-sm">
+                ✅ لا يوجد غائبون في التاريخ المحدد
+              </div>
+            ) : (
+              absentToday.map((row) => {
+                const key = waRowKey(row.student_id, row.session_id);
+                const sending = isSending(row.student_id);
+                const sent = whatsAppSentKeys.has(key);
+                const waLabel = `إرسال رسالة واتساب لولي أمر ${row.full_name}`;
+                return (
+                  <div
+                    key={key}
+                    className="flex items-center gap-3 px-4 py-3 flex-wrap sm:flex-nowrap"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm">{row.full_name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {row.class_name} — {row.subject}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {sent && (
+                        <span
+                          className="text-emerald-600 text-lg"
+                          title="تم إرسال واتساب في هذه الجلسة"
+                          aria-label="تم إرسال واتساب في هذه الجلسة"
+                        >
+                          ✓
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleAdminWhatsApp(
+                            row.student_id,
+                            row.session_id,
+                            row.full_name,
+                          )
+                        }
+                        disabled={sending || bulkWhatsAppRunning}
+                        title={waLabel}
+                        aria-label={waLabel}
+                        className="min-h-[44px] min-w-[44px] px-2 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center transition-colors"
+                      >
+                        <FaWhatsapp className="w-5 h-5" aria-hidden />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

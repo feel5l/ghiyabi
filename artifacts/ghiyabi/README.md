@@ -242,6 +242,26 @@ Open your Netlify site, click **تسجيل الدخول بـ Google**, and you s
 
 ---
 
+## Testing WhatsApp Integration / اختبار تكامل واتساب
+
+**English**
+
+1. Run the app in development (`npm run dev` or `pnpm --filter @workspace/ghiyabi dev`).
+2. Sign in, then open **`/debug/whatsapp`** (this route exists only when `import.meta.env.DEV` is true; production builds omit it).
+3. Enter a known `studentId` and `sessionId` (UUIDs from your database). The student must be marked **Absent** for that session, and `parent_phone` must be set. Click **Test WhatsApp** — results appear as toasts.
+4. In Supabase: **Edge Functions → notify-whatsapp → Logs** (or project Logs) to see request handling and WhatsApp API responses.
+5. In Meta **WhatsApp Cloud** / **Business Suite**, open message analytics or the API debugger to confirm delivery status for the template **`absent_notification`**.
+
+**العربية**
+
+1. شغّل التطبيق في وضع التطوير.
+2. سجّل الدخول ثم افتح **`/debug/whatsapp`** (متاح في التطوير فقط؛ لا يُضاف في الإنتاج).
+3. أدخل `studentId` و `sessionId` صحيحين. يجب أن يكون الطالب **غائباً** لهذه الحصة وأن يكون حقل **`parent_phone`** مملوءاً. اضغط **Test WhatsApp** وستظهر النتيجة في الإشعارات.
+4. راجع **سجلات** دالة الحافة `notify-whatsapp` في لوحة Supabase.
+5. راجع لوحة **Meta / WhatsApp Cloud** لمتابعة حالة الرسائل والقالب.
+
+---
+
 ## License
 
 MIT

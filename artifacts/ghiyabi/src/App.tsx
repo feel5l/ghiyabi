@@ -7,6 +7,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import Students from './pages/Students';
 import Classes from './pages/Classes';
 import AdminSessions from './pages/AdminSessions';
+import DebugWhatsApp from './pages/DebugWhatsApp';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { useAuth } from './hooks/useAuth';
 
@@ -25,6 +26,14 @@ function RootRedirect() {
   if (!role) return <LoadingScreen />;
   if (role === 'admin') return <Navigate to="/admin" replace />;
   return <Navigate to="/teacher" replace />;
+}
+
+/** Dev-only: any logged-in user can open tooling routes */
+function DevAuthGate({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  if (loading) return <LoadingScreen />;
+  if (!user) return <Navigate to="/login" replace />;
+  return <>{children}</>;
 }
 
 export default function App() {
@@ -69,6 +78,14 @@ export default function App() {
             <AdminSessions />
           </ProtectedRoute>
         } />
+
+        {import.meta.env.DEV ? (
+          <Route path="/debug/whatsapp" element={
+            <DevAuthGate>
+              <DebugWhatsApp />
+            </DevAuthGate>
+          } />
+        ) : null}
 
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>

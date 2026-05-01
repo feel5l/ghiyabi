@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { FaWhatsapp } from 'react-icons/fa';
 import { supabase } from '../lib/supabase';
-import { useAuth } from '../hooks/useAuth';
+import { useWhatsApp } from '../hooks/useWhatsApp';
 import type { Session, Student, AttendanceLog } from '../lib/supabase';
 import { AttendanceRow } from '../components/AttendanceRow';
 import { SkeletonRow } from '../components/Skeleton';
@@ -19,13 +20,26 @@ const PERIOD_LABELS: Record<string, string> = {
 export default function SessionAttendance() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
 
   const [session, setSession] = useState<Session | null>(null);
   const [logs, setLogs] = useState<AttendanceLog[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [initializing, setInitializing] = useState(false);
+  const [whatsAppSentIds, setWhatsAppSentIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const { notify, isSending } = useWhatsApp();
+
+  const handleWhatsApp = useCallback(
+    async (studentId: string, sessionId: string, name: string) => {
+      const result = await notify(studentId, sessionId, name);
+      if (result.ok && !result.skipped) {
+        setWhatsAppSentIds((prev) => new Set(prev).add(studentId));
+      }
+    },
+    [notify],
+  );
 
   useEffect(() => {
     if (id) loadSession();
@@ -185,13 +199,51 @@ export default function SessionAttendance() {
             {students.map((student, idx) => {
               const log = logMap.get(student.id);
               if (!log) return null;
+              const waSending = isSending(student.id);
+              const waSent = whatsAppSentIds.has(student.id);
+              const waLabel = `إرسال رسالة واتساب لولي أمر ${student.full_name}`;
               return (
-                <AttendanceRow
+                <div
                   key={student.id}
-                  log={log}
-                  studentName={student.full_name}
-                  index={idx}
-                />
+                  className="flex gap-2 sm:items-stretch border-b border-border last:border-b-0"
+                >
+                  <div className="flex-1 min-w-0 [&>div]:border-b-0">
+                    <AttendanceRow
+                      log={log}
+                      studentName={student.full_name}
+                      index={idx}
+                    />
+                  </div>
+                  {log.status === 'Absent' && (
+                    <div className="flex flex-col justify-center shrink-0 gap-1 py-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleWhatsApp(
+                            student.id,
+                            log.session_id,
+                            student.full_name,
+                          )
+                        }
+                        disabled={waSending}
+                        title={waLabel}
+                        aria-label={waLabel}
+                        className="min-h-[44px] min-w-[44px] px-2 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center transition-colors"
+                      >
+                        <FaWhatsapp className="w-5 h-5" aria-hidden />
+                      </button>
+                      {waSent && (
+                        <span
+                          className="text-emerald-600 text-center text-lg leading-none"
+                          title="تم إرسال واتساب في هذه الجلسة"
+                          aria-label="تم إرسال واتساب في هذه الجلسة"
+                        >
+                          ✓
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
               );
             })}
           </div>
