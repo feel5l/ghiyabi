@@ -76,11 +76,14 @@ export default function Login() {
           {/* Email/Password Form */}
           <form onSubmit={handleEmailLogin} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1.5 text-foreground">
+              <label htmlFor="login-email" className="block text-sm font-medium mb-1.5 text-foreground">
                 البريد الإلكتروني
               </label>
               <input
+                id="login-email"
+                name="email"
                 type="email"
+                autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="teacher@school.edu"
@@ -89,11 +92,14 @@ export default function Login() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1.5 text-foreground">
+              <label htmlFor="login-password" className="block text-sm font-medium mb-1.5 text-foreground">
                 كلمة المرور
               </label>
               <input
+                id="login-password"
+                name="password"
                 type="password"
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
