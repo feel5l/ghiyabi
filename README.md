@@ -89,3 +89,32 @@ supabase functions deploy notify-absent
 ```
 
 Set the `RESEND_API_KEY` secret in your Supabase project for the function to send emails.
+
+## WhatsApp Absent Notifications
+
+### 1. Deploy the Edge Function
+
+```bash
+supabase functions deploy notify-whatsapp
+```
+
+### 2. Set Secrets
+
+```bash
+supabase secrets set WHATSAPP_TOKEN=your_token
+supabase secrets set WHATSAPP_PHONE_NUMBER_ID=your_phone_number_id
+```
+
+### 3. WhatsApp Template
+
+Create a template named `absent_notification` (language: `ar`) in your Meta Business account with 4 body parameters:
+
+1. Student name
+2. Date
+3. Subject
+4. Class name
+
+### 4. Usage
+
+- **Teacher view (SessionAttendance):** A green WhatsApp button appears next to each student marked as "Absent". Tap it to send an instant notification to the parent.
+- **Admin view (AdminDashboard):** The "Absent Students Today" section lists all absent students with individual WhatsApp buttons and a "Send All" button to notify all parents at once.

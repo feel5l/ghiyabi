@@ -21,6 +21,7 @@ interface AttendanceRowProps {
   log: AttendanceLog;
   studentName: string;
   index: number;
+  onWhatsApp?: () => void;
 }
 
 type StatusButton = { status: AttendanceStatus; label: string; emoji: string; cls: string };
@@ -32,7 +33,7 @@ const BUTTONS: StatusButton[] = [
   { status: 'Excused', label: 'معذور', emoji: '📋', cls: 'btn-excused-outline data-[active=true]:btn-excused' },
 ];
 
-export function AttendanceRow({ log, studentName, index }: AttendanceRowProps) {
+export function AttendanceRow({ log, studentName, index, onWhatsApp }: AttendanceRowProps) {
   const [status, setStatus] = useState<AttendanceStatus>(log.status);
   const [saving, setSaving] = useState(false);
 
@@ -67,7 +68,7 @@ export function AttendanceRow({ log, studentName, index }: AttendanceRowProps) {
           </span>
         </div>
       </div>
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex gap-2 flex-wrap items-center">
         {BUTTONS.map((btn) => {
           const isActive = status === btn.status;
           return (
@@ -93,6 +94,17 @@ export function AttendanceRow({ log, studentName, index }: AttendanceRowProps) {
             </button>
           );
         })}
+
+        {status === 'Absent' && onWhatsApp && (
+          <button
+            type="button"
+            onClick={onWhatsApp}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-green-500 text-white hover:bg-green-600"
+            aria-label={`إرسال واتساب لولي أمر ${studentName}`}
+          >
+            <span className="text-lg">🟢</span>
+          </button>
+        )}
       </div>
     </div>
   );

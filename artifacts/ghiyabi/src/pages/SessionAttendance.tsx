@@ -6,6 +6,7 @@ import { useAuth } from '../hooks/useAuth';
 import type { Session, Student, AttendanceLog } from '../lib/supabase';
 import { AttendanceRow } from '../components/AttendanceRow';
 import { SkeletonRow } from '../components/Skeleton';
+import { useWhatsApp } from '../hooks/useWhatsApp';
 
 const PERIOD_LABELS: Record<string, string> = {
   P1: 'الحصة الأولى',
@@ -20,6 +21,7 @@ export default function SessionAttendance() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { notify } = useWhatsApp();
 
   const [session, setSession] = useState<Session | null>(null);
   const [logs, setLogs] = useState<AttendanceLog[]>([]);
@@ -191,6 +193,13 @@ export default function SessionAttendance() {
                   log={log}
                   studentName={student.full_name}
                   index={idx}
+                  onWhatsApp={() =>
+                    notify({
+                      studentId: student.id,
+                      sessionId: session!.id,
+                      studentName: student.full_name,
+                    })
+                  }
                 />
               );
             })}

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
+import { useWhatsApp } from '../hooks/useWhatsApp';
 import { KpiCard } from '../components/KpiCard';
 import { SkeletonKpi, SkeletonLine } from '../components/Skeleton';
 
@@ -30,11 +31,20 @@ interface TopAbsentee {
   absent_count: number;
 }
 
+interface AbsentStudent {
+  student_id: string;
+  session_id: string;
+  student_name: string;
+  class_name: string;
+}
+
 export default function AdminDashboard() {
   const { user, signOut } = useAuth();
+  const { notify } = useWhatsApp();
   const [classStats, setClassStats] = useState<ClassStats[]>([]);
   const [notStarted, setNotStarted] = useState<SessionNotStarted[]>([]);
   const [topAbsentees, setTopAbsentees] = useState<TopAbsentee[]>([]);
+  const [absentStudents, setAbsentStudents] = useState<AbsentStudent[]>([]);
   const [loading, setLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0]);
 
@@ -47,7 +57,7 @@ export default function AdminDashboard() {
 
   async function fetchData() {
     setLoading(true);
-    await Promise.all([fetchClassStats(), fetchNotStarted(), fetchTopAbsentees()]);
+    await Promise.all([fetchClassStats(), fetchNotStarted(), fetchTopAbsentees(), fetchAbsentStudents()]);
     setLoading(false);
   }
 
@@ -169,6 +179,51 @@ export default function AdminDashboard() {
     setTopAbsentees(sorted);
   }
 
+  async function fetchAbsentStudents() {
+    const { data: sessions } = await supabase
+      .from('sessions')
+      .select('id')
+      .eq('date', dateFilter);
+
+    const sessionIds = sessions?.map(s => s.id) || [];
+    if (sessionIds.length === 0) { setAbsentStudents([]); return; }
+
+    const { data: logs } = await supabase
+      .from('attendance_log')
+      .select('student_id, session_id, students(full_name, class_id, classes:class_id(name))')
+      .in('session_id', sessionIds)
+      .eq('status', 'Absent');
+
+    if (!logs) { setAbsentStudents([]); return; }
+
+    const seen = new Set<string>();
+    const list: AbsentStudent[] = [];
+    for (const log of logs) {
+      const key = `${log.student_id}-${log.session_id}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const s = log.students as unknown as { full_name: string; classes?: { name: string } } | null;
+      list.push({
+        student_id: log.student_id,
+        session_id: log.session_id,
+        student_name: s?.full_name || 'Unknown',
+        class_name: s?.classes?.name || '—',
+      });
+    }
+    setAbsentStudents(list);
+  }
+
+  const handleSendAllWhatsApp = async () => {
+    for (const row of absentStudents) {
+      await notify({
+        studentId: row.student_id,
+        sessionId: row.session_id,
+        studentName: row.student_name,
+      });
+      await new Promise((r) => setTimeout(r, 500));
+    }
+  };
+
   function rowColor(pct: number) {
     if (pct < 5) return 'bg-green-50';
     if (pct <= 10) return 'bg-yellow-50';
@@ -271,6 +326,50 @@ export default function AdminDashboard() {
             </div>
           </div>
           <p className="text-xs text-muted-foreground mt-2 px-1">* نسبة الطلاب الغائبين (مرة واحدة على الأقل) من إجمالي طلاب الفصل</p>
+        </div>
+
+        {/* Absent students today */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-bold">الطلاب الغائبون اليوم</h2>
+            {absentStudents.length > 0 && (
+              <button
+                type="button"
+                onClick={handleSendAllWhatsApp}
+                className="mb-2 rounded-md bg-green-600 px-3 py-1.5 text-sm text-white hover:bg-green-700"
+              >
+                إرسال واتساب لجميع الغائبين اليوم
+              </button>
+            )}
+          </div>
+          <div className="bg-card border border-card-border rounded-xl shadow-sm divide-y divide-border">
+            {absentStudents.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground text-sm">
+                ✅ لا يوجد غياب اليوم
+              </div>
+            ) : absentStudents.map((row) => (
+              <div key={`${row.student_id}-${row.session_id}`} className="flex items-center gap-3 px-4 py-3">
+                <div className="flex-1">
+                  <p className="font-medium text-sm">{row.student_name}</p>
+                  <p className="text-xs text-muted-foreground">{row.class_name}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    notify({
+                      studentId: row.student_id,
+                      sessionId: row.session_id,
+                      studentName: row.student_name,
+                    })
+                  }
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-green-500 text-white hover:bg-green-600"
+                  aria-label={`إرسال واتساب لولي أمر ${row.student_name}`}
+                >
+                  <span className="text-lg">🟢</span>
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
