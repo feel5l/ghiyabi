@@ -10,10 +10,19 @@ import AdminSessions from './pages/AdminSessions';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { useAuth } from './hooks/useAuth';
 
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+}
+
 function RootRedirect() {
   const { user, role, loading } = useAuth();
-  if (loading) return null;
+  if (loading) return <LoadingScreen />;
   if (!user) return <Navigate to="/login" replace />;
+  if (!role) return <LoadingScreen />;
   if (role === 'admin') return <Navigate to="/admin" replace />;
   return <Navigate to="/teacher" replace />;
 }

@@ -33,10 +33,13 @@ export function useAuth() {
       const u = session?.user ?? null;
       setUser(u);
       if (u?.email) {
+        setLoading(true);
         const r = await checkRole(u.email);
         setRole(r);
+        setLoading(false);
       } else {
         setRole(null);
+        setLoading(false);
       }
     });
 
