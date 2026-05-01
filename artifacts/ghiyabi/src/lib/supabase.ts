@@ -3,10 +3,11 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string || '').trim().replace(/['"]/g, '');
 const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string || '').trim().replace(/['"]/g, '');
 
-// Validate that the URL looks like a real Supabase URL
 const isValidUrl = supabaseUrl.startsWith('https://') || supabaseUrl.startsWith('http://');
 
-if (!isValidUrl || !supabaseAnonKey) {
+export const isSupabaseConfigured = isValidUrl && supabaseAnonKey.length > 0;
+
+if (!isSupabaseConfigured) {
   console.warn(`Supabase config missing or invalid. URL: "${supabaseUrl}"`);
 }
 

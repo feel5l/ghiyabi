@@ -7,13 +7,35 @@ import AdminDashboard from './pages/AdminDashboard';
 import Students from './pages/Students';
 import Classes from './pages/Classes';
 import AdminSessions from './pages/AdminSessions';
+import NotFound from './pages/not-found';
 import { ProtectedRoute } from './components/ProtectedRoute';
-import { useAuth } from './hooks/useAuth';
+import { AuthProvider, useAuth } from './hooks/useAuth';
+import { isSupabaseConfigured } from './lib/supabase';
 
 function LoadingScreen() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+}
+
+function ConfigMissingScreen() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background p-4" dir="rtl">
+      <div role="alert" data-testid="supabase-config-missing" className="w-full max-w-lg bg-card border border-card-border rounded-2xl shadow-lg p-6 space-y-4">
+        <h1 className="text-2xl font-extrabold text-primary">إعدادات غير مكتملة</h1>
+        <p className="text-foreground">
+          لم يتم العثور على إعدادات Supabase. يرجى إضافة المتغيرات التالية إلى ملف
+          <code className="mx-1 px-1 rounded bg-muted">.env</code>
+          ثم إعادة تشغيل التطبيق:
+        </p>
+        <pre className="bg-muted rounded-lg p-3 text-sm overflow-x-auto" dir="ltr">{`VITE_SUPABASE_URL=https://<project>.supabase.co
+VITE_SUPABASE_ANON_KEY=<anon-key>`}</pre>
+        <p className="text-xs text-muted-foreground">
+          يمكنك الحصول على هذه القيم من لوحة Supabase &rsaquo; Settings &rsaquo; API.
+        </p>
+      </div>
     </div>
   );
 }
@@ -30,7 +52,12 @@ function RootRedirect() {
 export default function App() {
   const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 
+  if (!isSupabaseConfigured) {
+    return <ConfigMissingScreen />;
+  }
+
   return (
+    <AuthProvider>
     <BrowserRouter basename={base}>
       <Routes>
         <Route path="/login" element={<Login />} />
@@ -70,7 +97,7 @@ export default function App() {
           </ProtectedRoute>
         } />
 
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
       <Toaster
         position="top-center"
@@ -81,5 +108,6 @@ export default function App() {
         }}
       />
     </BrowserRouter>
+    </AuthProvider>
   );
 }
