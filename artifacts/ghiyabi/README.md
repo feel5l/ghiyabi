@@ -108,20 +108,24 @@ After deploying, set up the Database Webhook in Supabase:
 
 1. In Replit, open the **Git** tab (left sidebar)
 2. Click **Connect to GitHub**
-3. Create a new repository named `ghiyabi`
+3. Create a new private repository (any name, e.g. `ghiyabi`)
 4. Click **Push to GitHub**
+
+> This pushes the full monorepo. The root `netlify.toml` is already configured to build just the Ghiyabi app.
 
 ### 8. Deploy to Netlify
 
 1. Go to [netlify.com](https://netlify.com) → **New site** → **Import from GitHub**
-2. Select the `ghiyabi` repository
-3. Build settings:
-   - **Build command:** `npm run build`
-   - **Publish directory:** `dist/public`
-4. Click **Add environment variables** and add:
+2. Select your repository
+3. Build settings are auto-detected from the root `netlify.toml` — no changes needed:
+   - **Build command:** `pnpm install && pnpm --filter @workspace/ghiyabi run build`
+   - **Publish directory:** `artifacts/ghiyabi/dist/public`
+4. Before deploying, click **Add environment variables** and add:
    - `VITE_SUPABASE_URL` — your Supabase project URL
    - `VITE_SUPABASE_ANON_KEY` — your Supabase anon key
 5. Click **Deploy site**
+
+> SPA routing (no 404 on refresh) is handled automatically by the `[[redirects]]` rule in the root `netlify.toml`.
 
 ---
 

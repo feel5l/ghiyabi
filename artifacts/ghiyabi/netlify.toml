@@ -1,6 +1,17 @@
+# NOTE: When deploying from the full monorepo (recommended),
+# Netlify uses the root-level netlify.toml instead of this file.
+# This file is kept as a reference for standalone deployments only.
+#
+# For standalone deployment (if pushing only artifacts/ghiyabi/ to GitHub):
+# - Build command: npm install && npm run build
+# - Publish directory: dist/public
+
 [build]
-  command = "npm run build"
+  command = "npm install && npm run build"
   publish = "dist/public"
+
+[build.environment]
+  NODE_VERSION = "22"
 
 [[redirects]]
   from = "/*"
