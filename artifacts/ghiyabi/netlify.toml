@@ -3,15 +3,16 @@
 # This file is kept as a reference for standalone deployments only.
 #
 # For standalone deployment (if pushing only artifacts/ghiyabi/ to GitHub):
-# - Build command: npm install && npm run build
+# - Build command: pnpm install --frozen-lockfile && pnpm run build
 # - Publish directory: dist/public
 
 [build]
-  command = "npm install && npm run build"
-  publish = "dist/public"
+  command = "pnpm install --frozen-lockfile && pnpm --filter @workspace/ghiyabi run build"
+  publish = "artifacts/ghiyabi/dist/public"
 
 [build.environment]
   NODE_VERSION = "22"
+  PNPM_VERSION = "10"
 
 [[redirects]]
   from = "/*"
