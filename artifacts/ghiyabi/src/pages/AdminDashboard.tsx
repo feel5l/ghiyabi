@@ -194,6 +194,9 @@ export default function AdminDashboard() {
             <Link to="/admin/sessions" className="text-sm text-primary hover:underline font-medium hidden sm:block">
               الحصص
             </Link>
+            <Link to="/admin/account" className="text-sm text-primary hover:underline font-medium hidden sm:block">
+              حساب المدير
+            </Link>
             <button onClick={signOut} className="text-sm text-destructive hover:underline font-medium">
               خروج
             </button>
@@ -317,15 +320,18 @@ export default function AdminDashboard() {
         </div>
 
         {/* Nav links mobile */}
-        <div className="flex gap-4 sm:hidden pt-4 border-t border-border">
-          <Link to="/admin/students" className="flex-1 min-h-[48px] flex items-center justify-center bg-card border border-border rounded-xl text-sm font-medium text-foreground hover:bg-muted transition-colors">
+        <div className="grid grid-cols-2 gap-3 sm:hidden pt-4 border-t border-border">
+          <Link to="/admin/students" className="min-h-[48px] flex items-center justify-center bg-card border border-border rounded-xl text-sm font-medium text-foreground hover:bg-muted transition-colors">
             👥 الطلاب
           </Link>
-          <Link to="/admin/classes" className="flex-1 min-h-[48px] flex items-center justify-center bg-card border border-border rounded-xl text-sm font-medium text-foreground hover:bg-muted transition-colors">
+          <Link to="/admin/classes" className="min-h-[48px] flex items-center justify-center bg-card border border-border rounded-xl text-sm font-medium text-foreground hover:bg-muted transition-colors">
             🏫 الفصول
           </Link>
-          <Link to="/admin/sessions" className="flex-1 min-h-[48px] flex items-center justify-center bg-card border border-border rounded-xl text-sm font-medium text-foreground hover:bg-muted transition-colors">
+          <Link to="/admin/sessions" className="min-h-[48px] flex items-center justify-center bg-card border border-border rounded-xl text-sm font-medium text-foreground hover:bg-muted transition-colors">
             📋 الحصص
+          </Link>
+          <Link to="/admin/account" className="min-h-[48px] flex items-center justify-center bg-card border border-border rounded-xl text-sm font-medium text-foreground hover:bg-muted transition-colors">
+            ⚙️ الحساب
           </Link>
         </div>
       </main>
