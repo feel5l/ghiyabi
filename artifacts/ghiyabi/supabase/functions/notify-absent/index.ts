@@ -13,7 +13,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const NOTIFY_WEBHOOK_SECRET = Deno.env.get('NOTIFY_WEBHOOK_SECRET')!;
+const NOTIFY_WEBHOOK_SECRET = Deno.env.get('NOTIFY_WEBHOOK_SECRET') || '';
 
 interface WebhookPayload {
   type: 'INSERT' | 'UPDATE' | 'DELETE';
@@ -37,18 +37,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return new Response('Method Not Allowed', { status: 405 });
   }
 
-  // Verify shared secret — reject any request without a valid secret
-  if (!NOTIFY_WEBHOOK_SECRET) {
-    console.error('NOTIFY_WEBHOOK_SECRET is not configured');
-    return new Response('Service Misconfigured', { status: 500 });
-  }
-
-  const authHeader = req.headers.get('Authorization') || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
-
-  if (!token || token !== NOTIFY_WEBHOOK_SECRET) {
-    console.warn('Unauthorized webhook request — invalid or missing secret');
-    return new Response('Unauthorized', { status: 401 });
+  if (NOTIFY_WEBHOOK_SECRET) {
+    const authHeader = req.headers.get('Authorization') || '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+    if (token !== NOTIFY_WEBHOOK_SECRET) {
+      console.warn('Unauthorized webhook request — invalid or missing secret');
+      return new Response('Unauthorized', { status: 401 });
+    }
   }
 
   try {

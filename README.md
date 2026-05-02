@@ -89,3 +89,7 @@ supabase functions deploy notify-absent
 ```
 
 Set the `RESEND_API_KEY` secret in your Supabase project for the function to send emails.
+
+## Production deployment
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for Netlify, Supabase Auth URLs, Edge Functions, and webhooks.

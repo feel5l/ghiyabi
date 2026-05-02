@@ -1,5 +1,6 @@
 [build]
-  command = "pnpm install && pnpm --filter @workspace/ghiyabi run build"
+  # Monorepo root: install all workspaces, then build the Vite app only.
+  command = "pnpm install --frozen-lockfile && pnpm --filter @workspace/ghiyabi run build"
   publish = "artifacts/ghiyabi/dist/public"
 
 [build.environment]

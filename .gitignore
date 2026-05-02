@@ -52,3 +52,7 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+
+# Local MCP / deploy helpers (do not commit)
+.tmp-notify-absent.json
+mcp-deploy-notify-absent.json

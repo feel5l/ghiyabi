@@ -1,0 +1,72 @@
+name: Deploy Supabase Edge Functions
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'artifacts/ghiyabi/supabase/functions/**'
+      - '.github/workflows/deploy-supabase-functions.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF"
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+
+      - name: Stage functions for CLI layout
+        run: |
+          mkdir -p supabase/functions
+          cp -r artifacts/ghiyabi/supabase/functions/* supabase/functions/
+
+      - name: Set Edge Function secrets
+        run: |
+          if [ -n "$WHATSAPP_ACCESS_TOKEN" ]; then
+            supabase secrets set WHATSAPP_ACCESS_TOKEN="$WHATSAPP_ACCESS_TOKEN"
+          fi
+          if [ -n "$WHATSAPP_PHONE_NUMBER_ID" ]; then
+            supabase secrets set WHATSAPP_PHONE_NUMBER_ID="$WHATSAPP_PHONE_NUMBER_ID"
+          fi
+          if [ -n "$RESEND_API_KEY" ]; then
+            supabase secrets set RESEND_API_KEY="$RESEND_API_KEY"
+          fi
+          if [ -n "$NOTIFY_WEBHOOK_SECRET" ]; then
+            supabase secrets set NOTIFY_WEBHOOK_SECRET="$NOTIFY_WEBHOOK_SECRET"
+          fi
+          if [ -n "$WHATSAPP_GRAPH_API_VERSION" ]; then
+            supabase secrets set WHATSAPP_GRAPH_API_VERSION="$WHATSAPP_GRAPH_API_VERSION"
+          fi
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          WHATSAPP_ACCESS_TOKEN: ${{ secrets.WHATSAPP_ACCESS_TOKEN }}
+          WHATSAPP_PHONE_NUMBER_ID: ${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          NOTIFY_WEBHOOK_SECRET: ${{ secrets.NOTIFY_WEBHOOK_SECRET }}
+          WHATSAPP_GRAPH_API_VERSION: ${{ secrets.WHATSAPP_GRAPH_API_VERSION }}
+
+      - name: Deploy notify-absent
+        run: supabase functions deploy notify-absent --project-ref "$SUPABASE_PROJECT_REF"
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+
+      - name: Deploy notify-whatsapp
+        run: supabase functions deploy notify-whatsapp --project-ref "$SUPABASE_PROJECT_REF"
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
