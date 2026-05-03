@@ -161,6 +161,31 @@ CREATE POLICY "public_read_teachers" ON teachers
   FOR SELECT
   USING (true);
 
+-- 7. weekly_schedule (fixed repeating timetable template)
+CREATE TABLE IF NOT EXISTS weekly_schedule (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  day_of_week   SMALLINT NOT NULL CHECK (day_of_week >= 0 AND day_of_week <= 6),
+                                                  -- 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu
+  period        TEXT NOT NULL,                    -- "P1".."P6"
+  subject       TEXT NOT NULL,
+  class_id      UUID REFERENCES classes(id) ON DELETE CASCADE,
+  teacher_phone TEXT NOT NULL,
+  created_at    TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE weekly_schedule ENABLE ROW LEVEL SECURITY;
+
+-- Admins: full access
+CREATE POLICY "admins_all_weekly_schedule" ON weekly_schedule
+  FOR ALL
+  USING (is_admin())
+  WITH CHECK (is_admin());
+
+-- Anyone (teachers): read weekly schedule
+CREATE POLICY "public_read_weekly_schedule" ON weekly_schedule
+  FOR SELECT
+  USING (true);
+
 -- =============================================================
 -- INDEXES for performance
 -- =============================================================
@@ -171,4 +196,7 @@ CREATE INDEX IF NOT EXISTS idx_sessions_teacher      ON sessions(teacher_phone);
 CREATE INDEX IF NOT EXISTS idx_sessions_class_id     ON sessions(class_id);
 CREATE INDEX IF NOT EXISTS idx_attendance_session_id ON attendance_log(session_id);
 CREATE INDEX IF NOT EXISTS idx_attendance_student_id ON attendance_log(student_id);
-CREATE INDEX IF NOT EXISTS idx_attendance_status     ON attendance_log(status);
+CREATE INDEX IF NOT EXISTS idx_attendance_status       ON attendance_log(status);
+CREATE INDEX IF NOT EXISTS idx_weekly_schedule_day     ON weekly_schedule(day_of_week);
+CREATE INDEX IF NOT EXISTS idx_weekly_schedule_teacher ON weekly_schedule(teacher_phone);
+CREATE INDEX IF NOT EXISTS idx_weekly_schedule_class   ON weekly_schedule(class_id);

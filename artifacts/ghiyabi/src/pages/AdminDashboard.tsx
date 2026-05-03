@@ -197,6 +197,9 @@ export default function AdminDashboard() {
             <Link to="/admin/sessions" className="text-sm text-primary hover:underline font-medium hidden sm:block">
               الحصص
             </Link>
+            <Link to="/admin/schedule" className="text-sm text-primary hover:underline font-medium hidden sm:block">
+              الجدول الأسبوعي
+            </Link>
             <Link to="/admin/account" className="text-sm text-primary hover:underline font-medium hidden sm:block">
               حساب المدير
             </Link>
@@ -335,6 +338,9 @@ export default function AdminDashboard() {
           </Link>
           <Link to="/admin/sessions" className="min-h-[48px] flex items-center justify-center bg-card border border-border rounded-xl text-sm font-medium text-foreground hover:bg-muted transition-colors">
             📋 الحصص
+          </Link>
+          <Link to="/admin/schedule" className="min-h-[48px] flex items-center justify-center bg-card border border-border rounded-xl text-sm font-medium text-foreground hover:bg-muted transition-colors">
+            🗓️ الجدول الأسبوعي
           </Link>
           <Link to="/admin/account" className="min-h-[48px] flex items-center justify-center bg-card border border-border rounded-xl text-sm font-medium text-foreground hover:bg-muted transition-colors">
             ⚙️ الحساب

@@ -9,6 +9,7 @@ import Classes from './pages/Classes';
 import AdminSessions from './pages/AdminSessions';
 import AdminAccount from './pages/AdminAccount';
 import AdminTeachers from './pages/AdminTeachers';
+import AdminSchedule from './pages/AdminSchedule';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { useAuth } from './hooks/useAuth';
 
@@ -78,6 +79,11 @@ export default function App() {
         <Route path="/admin/teachers" element={
           <ProtectedRoute requiredRole="admin">
             <AdminTeachers />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/schedule" element={
+          <ProtectedRoute requiredRole="admin">
+            <AdminSchedule />
           </ProtectedRoute>
         } />
 
