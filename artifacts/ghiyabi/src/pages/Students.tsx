@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import type { Student, Class } from '../lib/supabase';
 import { SkeletonLine } from '../components/Skeleton';
+import BulkImportModal, { type ImportResult } from '../components/BulkImportModal';
 
 interface StudentWithClass extends Student {
   classes?: Class;
@@ -15,6 +16,7 @@ export default function Students() {
   const [loading, setLoading] = useState(true);
   const [filterClass, setFilterClass] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [editStudent, setEditStudent] = useState<StudentWithClass | null>(null);
   const [form, setForm] = useState({ full_name: '', class_id: '', parent_email: '', parent_phone: '' });
   const [saving, setSaving] = useState(false);
@@ -84,6 +86,52 @@ export default function Students() {
     else { toast.success('تم حذف الطالب'); loadStudents(); }
   }
 
+  async function handleBulkImport(rows: string[][]): Promise<ImportResult> {
+    let imported = 0;
+    const errors: string[] = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const full_name = row[0]?.trim();
+      const classRef = row[1]?.trim() || '';
+      const parent_phone = row[2]?.trim() ? row[2].trim() : null;
+      const parent_email = row[3]?.trim() ? row[3].trim() : null;
+
+      if (!full_name) { errors.push(`السطر ${i + 1}: اسم الطالب مطلوب`); continue; }
+
+      // Resolve class_id from name or "grade — name" format
+      let class_id: string | null = null;
+      if (classRef) {
+        const match = classes.find(
+          (c) =>
+            c.name.toLowerCase() === classRef.toLowerCase() ||
+            `${c.grade_level} — ${c.name}`.toLowerCase() === classRef.toLowerCase() ||
+            `${c.grade_level} - ${c.name}`.toLowerCase() === classRef.toLowerCase()
+        );
+        if (!match) {
+          errors.push(`السطر ${i + 1} (${full_name}): الفصل "${classRef}" غير موجود`);
+          continue;
+        }
+        class_id = match.id;
+      }
+
+      const { error } = await supabase.from('students').insert({
+        full_name,
+        class_id,
+        parent_phone,
+        parent_email,
+      });
+      if (error) errors.push(`السطر ${i + 1} (${full_name}): ${error.message}`);
+      else imported++;
+    }
+
+    if (imported > 0) {
+      toast.success(`تم استيراد ${imported} طالب`);
+      loadStudents();
+    }
+    return { imported, errors };
+  }
+
   async function toggleActive(s: StudentWithClass) {
     const { error } = await supabase.from('students').update({ is_active: !s.is_active }).eq('id', s.id);
     if (error) toast.error('حدث خطأ');
@@ -96,6 +144,12 @@ export default function Students() {
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-3">
           <Link to="/admin" className="text-primary hover:underline text-sm font-medium">← لوحة الإدارة</Link>
           <h1 className="flex-1 text-lg font-bold">إدارة الطلاب</h1>
+          <button
+            onClick={() => setShowImport(true)}
+            className="min-h-[40px] px-3 border border-primary text-primary rounded-lg text-sm font-semibold hover:bg-primary/5"
+          >
+            📥 استيراد
+          </button>
           <button onClick={openAdd} className="min-h-[40px] px-4 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:opacity-90">
             + إضافة طالب
           </button>
@@ -103,6 +157,18 @@ export default function Students() {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-6">
+        {/* Bulk Import Modal */}
+        {showImport && (
+          <BulkImportModal
+            title="استيراد طلاب"
+            columns={['اسم الطالب', 'الفصل (اختياري)', 'هاتف ولي الأمر (اختياري)', 'بريد ولي الأمر (اختياري)']}
+            example={'أحمد محمد العمري,Grade 3 — 3-A,0501000001,parent@example.com\nسارة خالد الزهراني,Grade 4 — 4-B,,\nعمر عبدالله النجار,,,'}
+            templateFilename="students_template.csv"
+            onImport={handleBulkImport}
+            onClose={() => setShowImport(false)}
+          />
+        )}
+
         {/* Filter */}
         <div className="mb-4 flex items-center gap-3">
           <label className="text-sm font-medium">تصفية حسب الفصل:</label>
@@ -209,7 +275,23 @@ export default function Students() {
                   ? (
                       <tr>
                         <td colSpan={4} className="text-center py-12 text-muted-foreground">
-                          لا يوجد طلاب. ابدأ بإضافة طالب جديد.
+                          <div className="text-4xl mb-3">👩‍🎓</div>
+                          <p className="font-semibold mb-1">لا يوجد طلاب بعد</p>
+                          <p className="text-sm mb-4">ابدأ بإضافة طالب أو استيراد قائمة</p>
+                          <div className="flex items-center justify-center gap-3">
+                            <button
+                              onClick={openAdd}
+                              className="px-4 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:opacity-90"
+                            >
+                              + إضافة طالب
+                            </button>
+                            <button
+                              onClick={() => setShowImport(true)}
+                              className="px-4 py-2 border border-primary text-primary rounded-xl text-sm font-semibold hover:bg-primary/5"
+                            >
+                              📥 استيراد من قائمة
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     )

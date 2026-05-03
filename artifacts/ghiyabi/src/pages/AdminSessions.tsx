@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import type { Class, Session, Teacher } from '../lib/supabase';
 import { SkeletonLine } from '../components/Skeleton';
+import BulkImportModal, { type ImportResult } from '../components/BulkImportModal';
 
 const PERIOD_OPTIONS = ['P1', 'P2', 'P3', 'P4', 'P5', 'P6'];
 
@@ -38,6 +39,7 @@ export default function AdminSessions() {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [editSession, setEditSession] = useState<SessionWithClass | null>(null);
   const [saving, setSaving] = useState(false);
   const [dateFilter, setDateFilter] = useState(today());
@@ -167,6 +169,64 @@ export default function AdminSessions() {
     else { toast.success('تم حذف الحصة'); loadSessions(); }
   }
 
+  async function handleBulkImport(rows: string[][]): Promise<ImportResult> {
+    let imported = 0;
+    const errors: string[] = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const date = row[0]?.trim();
+      const classRef = row[1]?.trim() || '';
+      const teacher_phone = row[2]?.trim();
+      const subject = row[3]?.trim();
+      const period = row[4]?.trim().toUpperCase();
+
+      if (!date) { errors.push(`السطر ${i + 1}: التاريخ مطلوب (YYYY-MM-DD)`); continue; }
+      if (!teacher_phone) { errors.push(`السطر ${i + 1}: رقم هاتف المعلم مطلوب`); continue; }
+      if (!subject) { errors.push(`السطر ${i + 1}: المادة مطلوبة`); continue; }
+      if (!period || !PERIOD_OPTIONS.includes(period)) {
+        errors.push(`السطر ${i + 1}: الحصة "${row[4]}" غير صحيحة — استخدم P1 .. P6`);
+        continue;
+      }
+      if (!teachers.some(t => t.phone === teacher_phone)) {
+        errors.push(`السطر ${i + 1}: المعلم برقم "${teacher_phone}" غير موجود في قائمة المعلمين المفعّلين`);
+        continue;
+      }
+
+      // Resolve class_id
+      let class_id: string | null = null;
+      if (classRef) {
+        const match = classes.find(
+          (c) =>
+            c.name.toLowerCase() === classRef.toLowerCase() ||
+            `${c.grade_level} — ${c.name}`.toLowerCase() === classRef.toLowerCase() ||
+            `${c.grade_level} - ${c.name}`.toLowerCase() === classRef.toLowerCase()
+        );
+        if (!match) {
+          errors.push(`السطر ${i + 1}: الفصل "${classRef}" غير موجود`);
+          continue;
+        }
+        class_id = match.id;
+      }
+
+      const { error } = await supabase.from('sessions').insert({
+        date,
+        class_id,
+        teacher_phone,
+        subject,
+        period,
+      });
+      if (error) errors.push(`السطر ${i + 1}: ${error.message}`);
+      else imported++;
+    }
+
+    if (imported > 0) {
+      toast.success(`تم استيراد ${imported} حصة`);
+      loadSessions();
+    }
+    return { imported, errors };
+  }
+
   // Group sessions by class for display
   const grouped = classes
     .map(cls => ({
@@ -182,6 +242,12 @@ export default function AdminSessions() {
           <Link to="/admin" className="text-primary hover:underline text-sm font-medium">← لوحة الإدارة</Link>
           <h1 className="flex-1 text-lg font-bold">إدارة الحصص</h1>
           <button
+            onClick={() => setShowImport(true)}
+            className="min-h-[40px] px-3 border border-primary text-primary rounded-lg text-sm font-semibold hover:bg-primary/5"
+          >
+            📥 استيراد
+          </button>
+          <button
             onClick={openAdd}
             disabled={classes.length === 0}
             title={classes.length === 0 ? 'أضف فصلاً دراسياً أولاً' : undefined}
@@ -193,6 +259,18 @@ export default function AdminSessions() {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+        {/* Bulk Import Modal */}
+        {showImport && (
+          <BulkImportModal
+            title="استيراد حصص دراسية"
+            columns={['التاريخ', 'الفصل', 'هاتف المعلم', 'المادة', 'الحصة']}
+            example={'2025-09-01,Grade 3 — 3-A,0501000001,رياضيات,P1\n2025-09-01,Grade 4 — 4-B,0501000002,علوم,P2\n2025-09-02,Grade 3 — 3-A,0501000001,لغة عربية,P3'}
+            templateFilename="sessions_template.csv"
+            onImport={handleBulkImport}
+            onClose={() => setShowImport(false)}
+          />
+        )}
+
         {/* No classes banner */}
         {!loading && classes.length === 0 && (
           <div className="flex items-start gap-3 bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-3 text-sm">
@@ -340,12 +418,20 @@ export default function AdminSessions() {
             <div className="text-5xl mb-4">📅</div>
             <h3 className="text-lg font-semibold mb-2">لا توجد حصص في هذا اليوم</h3>
             <p className="text-sm text-muted-foreground mb-4">أضف حصصاً لتظهر للمعلمين في لوحة التحكم</p>
-            <button
-              onClick={openAdd}
-              className="px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:opacity-90"
-            >
-              + إضافة حصة
-            </button>
+            <div className="flex items-center justify-center gap-3">
+              <button
+                onClick={openAdd}
+                className="px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:opacity-90"
+              >
+                + إضافة حصة
+              </button>
+              <button
+                onClick={() => setShowImport(true)}
+                className="px-5 py-2.5 border border-primary text-primary rounded-xl text-sm font-semibold hover:bg-primary/5"
+              >
+                📥 استيراد من قائمة
+              </button>
+            </div>
           </div>
         ) : (
           <div className="space-y-6">
