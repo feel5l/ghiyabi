@@ -131,14 +131,19 @@ export default function AdminSessions() {
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.class_id || !form.teacher_phone.trim() || !form.subject.trim() || !form.period || !form.date) {
+    const teacherPhone = form.teacher_phone.trim();
+    if (!form.class_id || !teacherPhone || !form.subject.trim() || !form.period || !form.date) {
       toast.error('يرجى ملء جميع الحقول المطلوبة');
+      return;
+    }
+    if (!teachers.some(t => t.phone === teacherPhone)) {
+      toast.error('يرجى اختيار معلم من القائمة');
       return;
     }
     setSaving(true);
     const payload = {
       class_id: form.class_id,
-      teacher_phone: form.teacher_phone.trim(),
+      teacher_phone: teacherPhone,
       subject: form.subject.trim(),
       period: form.period,
       date: form.date,

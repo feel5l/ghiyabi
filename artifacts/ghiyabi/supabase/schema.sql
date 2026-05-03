@@ -122,8 +122,16 @@ CREATE POLICY "admins_all_attendance" ON attendance_log
   WITH CHECK (is_admin());
 
 -- Anyone: read and write attendance (teachers mark attendance without Supabase Auth)
-CREATE POLICY "public_rw_attendance" ON attendance_log
-  FOR ALL
+CREATE POLICY "public_read_attendance" ON attendance_log
+  FOR SELECT
+  USING (NOT is_admin());
+
+CREATE POLICY "public_write_attendance" ON attendance_log
+  FOR INSERT
+  WITH CHECK (NOT is_admin());
+
+CREATE POLICY "public_update_attendance" ON attendance_log
+  FOR UPDATE
   USING (NOT is_admin())
   WITH CHECK (NOT is_admin());
 
