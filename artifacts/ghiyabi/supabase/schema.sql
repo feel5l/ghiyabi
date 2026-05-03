@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS classes (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name          TEXT NOT NULL,          -- e.g. "3-A"
   grade_level   TEXT NOT NULL,          -- e.g. "Grade 3"
-  teacher_email TEXT
+  teacher_phone TEXT
 );
 
 -- 2. students
@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS sessions (
   period        TEXT NOT NULL,           -- "P1".."P6"
   subject       TEXT NOT NULL,
   class_id      UUID REFERENCES classes(id) ON DELETE CASCADE,
-  teacher_email TEXT NOT NULL
+  teacher_phone TEXT NOT NULL
 );
 
 -- 4. attendance_log
@@ -48,6 +48,13 @@ CREATE TABLE IF NOT EXISTS admins (
   email TEXT PRIMARY KEY
 );
 
+-- 6. teachers
+CREATE TABLE IF NOT EXISTS teachers (
+  phone      TEXT PRIMARY KEY,
+  name       TEXT NOT NULL,
+  is_active  BOOLEAN NOT NULL DEFAULT false
+);
+
 -- =============================================================
 -- ROW LEVEL SECURITY (RLS)
 -- =============================================================
@@ -57,6 +64,7 @@ ALTER TABLE students        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sessions        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE attendance_log  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE admins          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE teachers        ENABLE ROW LEVEL SECURITY;
 
 -- Helper function: is the current user an admin?
 CREATE OR REPLACE FUNCTION is_admin()
@@ -74,17 +82,10 @@ CREATE POLICY "admins_all_classes" ON classes
   USING (is_admin())
   WITH CHECK (is_admin());
 
--- Teachers: can see classes they teach
-CREATE POLICY "teachers_read_own_classes" ON classes
+-- Anyone (including unauthenticated / teacher sessions): read all classes
+CREATE POLICY "public_read_classes" ON classes
   FOR SELECT
-  USING (
-    NOT is_admin() AND (
-      teacher_email = auth.email()
-      OR id IN (
-        SELECT class_id FROM sessions WHERE teacher_email = auth.email()
-      )
-    )
-  );
+  USING (NOT is_admin());
 
 -- ----- students -----
 
@@ -94,16 +95,10 @@ CREATE POLICY "admins_all_students" ON students
   USING (is_admin())
   WITH CHECK (is_admin());
 
--- Teachers: read students in their classes
-CREATE POLICY "teachers_read_class_students" ON students
+-- Anyone: read all active students
+CREATE POLICY "public_read_students" ON students
   FOR SELECT
-  USING (
-    NOT is_admin() AND class_id IN (
-      SELECT id FROM classes WHERE teacher_email = auth.email()
-      UNION
-      SELECT class_id FROM sessions WHERE teacher_email = auth.email()
-    )
-  );
+  USING (NOT is_admin());
 
 -- ----- sessions -----
 
@@ -113,11 +108,10 @@ CREATE POLICY "admins_all_sessions" ON sessions
   USING (is_admin())
   WITH CHECK (is_admin());
 
--- Teachers: see and insert their own sessions
-CREATE POLICY "teachers_own_sessions" ON sessions
-  FOR ALL
-  USING (teacher_email = auth.email())
-  WITH CHECK (teacher_email = auth.email());
+-- Anyone: read all sessions
+CREATE POLICY "public_read_sessions" ON sessions
+  FOR SELECT
+  USING (NOT is_admin());
 
 -- ----- attendance_log -----
 
@@ -127,19 +121,19 @@ CREATE POLICY "admins_all_attendance" ON attendance_log
   USING (is_admin())
   WITH CHECK (is_admin());
 
--- Teachers: can see/insert/update attendance for their sessions
-CREATE POLICY "teachers_own_session_attendance" ON attendance_log
-  FOR ALL
-  USING (
-    session_id IN (
-      SELECT id FROM sessions WHERE teacher_email = auth.email()
-    )
-  )
-  WITH CHECK (
-    session_id IN (
-      SELECT id FROM sessions WHERE teacher_email = auth.email()
-    )
-  );
+-- Anyone: read and write attendance (teachers mark attendance without Supabase Auth)
+CREATE POLICY "public_read_attendance" ON attendance_log
+  FOR SELECT
+  USING (NOT is_admin());
+
+CREATE POLICY "public_write_attendance" ON attendance_log
+  FOR INSERT
+  WITH CHECK (NOT is_admin());
+
+CREATE POLICY "public_update_attendance" ON attendance_log
+  FOR UPDATE
+  USING (NOT is_admin())
+  WITH CHECK (NOT is_admin());
 
 -- ----- admins -----
 
@@ -154,13 +148,26 @@ CREATE POLICY "admins_write_admins" ON admins
   USING (is_admin())
   WITH CHECK (is_admin());
 
+-- ----- teachers -----
+
+-- Admins: full access
+CREATE POLICY "admins_all_teachers" ON teachers
+  FOR ALL
+  USING (is_admin())
+  WITH CHECK (is_admin());
+
+-- Anyone: read active teachers (needed for login check)
+CREATE POLICY "public_read_teachers" ON teachers
+  FOR SELECT
+  USING (true);
+
 -- =============================================================
 -- INDEXES for performance
 -- =============================================================
 CREATE INDEX IF NOT EXISTS idx_students_class_id     ON students(class_id);
 CREATE INDEX IF NOT EXISTS idx_students_is_active    ON students(is_active);
 CREATE INDEX IF NOT EXISTS idx_sessions_date         ON sessions(date);
-CREATE INDEX IF NOT EXISTS idx_sessions_teacher      ON sessions(teacher_email);
+CREATE INDEX IF NOT EXISTS idx_sessions_teacher      ON sessions(teacher_phone);
 CREATE INDEX IF NOT EXISTS idx_sessions_class_id     ON sessions(class_id);
 CREATE INDEX IF NOT EXISTS idx_attendance_session_id ON attendance_log(session_id);
 CREATE INDEX IF NOT EXISTS idx_attendance_student_id ON attendance_log(student_id);

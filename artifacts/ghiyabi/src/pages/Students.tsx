@@ -35,7 +35,7 @@ export default function Students() {
 
   async function loadStudents() {
     setLoading(true);
-    let query = supabase.from('students').select('*, classes(id, name, grade_level, teacher_email)').order('full_name');
+    let query = supabase.from('students').select('*, classes(id, name, grade_level, teacher_phone)').order('full_name');
     if (filterClass) query = query.eq('class_id', filterClass);
     const { data, error } = await query;
     setLoading(false);

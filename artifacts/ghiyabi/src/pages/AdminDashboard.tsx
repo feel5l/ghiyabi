@@ -185,6 +185,9 @@ export default function AdminDashboard() {
             <p className="text-xs text-muted-foreground">Ghiyabi Admin</p>
           </div>
           <div className="flex items-center gap-4">
+            <Link to="/admin/teachers" className="text-sm text-primary hover:underline font-medium hidden sm:block">
+              المعلمون
+            </Link>
             <Link to="/admin/students" className="text-sm text-primary hover:underline font-medium hidden sm:block">
               الطلاب
             </Link>
@@ -321,6 +324,9 @@ export default function AdminDashboard() {
 
         {/* Nav links mobile */}
         <div className="grid grid-cols-2 gap-3 sm:hidden pt-4 border-t border-border">
+          <Link to="/admin/teachers" className="min-h-[48px] flex items-center justify-center bg-card border border-border rounded-xl text-sm font-medium text-foreground hover:bg-muted transition-colors">
+            👩‍🏫 المعلمون
+          </Link>
           <Link to="/admin/students" className="min-h-[48px] flex items-center justify-center bg-card border border-border rounded-xl text-sm font-medium text-foreground hover:bg-muted transition-colors">
             👥 الطلاب
           </Link>

@@ -8,6 +8,7 @@ import Students from './pages/Students';
 import Classes from './pages/Classes';
 import AdminSessions from './pages/AdminSessions';
 import AdminAccount from './pages/AdminAccount';
+import AdminTeachers from './pages/AdminTeachers';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { useAuth } from './hooks/useAuth';
 
@@ -20,12 +21,11 @@ function LoadingScreen() {
 }
 
 function RootRedirect() {
-  const { user, role, loading } = useAuth();
+  const { user, role, teacherPhone, loading } = useAuth();
   if (loading) return <LoadingScreen />;
-  if (!user) return <Navigate to="/login" replace />;
-  if (!role) return <LoadingScreen />;
-  if (role === 'admin') return <Navigate to="/admin" replace />;
-  return <Navigate to="/teacher" replace />;
+  if (role === 'teacher' && teacherPhone) return <Navigate to="/teacher" replace />;
+  if (role === 'admin' && user) return <Navigate to="/admin" replace />;
+  return <Navigate to="/login" replace />;
 }
 
 export default function App() {
@@ -73,6 +73,11 @@ export default function App() {
         <Route path="/admin/account" element={
           <ProtectedRoute requiredRole="admin">
             <AdminAccount />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/teachers" element={
+          <ProtectedRoute requiredRole="admin">
+            <AdminTeachers />
           </ProtectedRoute>
         } />
 
