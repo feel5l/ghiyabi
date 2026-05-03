@@ -8,24 +8,24 @@ import { SessionCard } from '../components/SessionCard';
 import { SkeletonCard } from '../components/Skeleton';
 
 export default function TeacherDashboard() {
-  const { user, signOut, loading: authLoading } = useAuth();
+  const { teacherPhone, teacherName, signOut, loading: authLoading } = useAuth();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
 
   const today = new Date().toISOString().split('T')[0];
 
   useEffect(() => {
-    if (!user?.email) return;
+    if (!teacherPhone) return;
     fetchSessions();
-  }, [user]);
+  }, [teacherPhone]);
 
   async function fetchSessions() {
     setLoading(true);
     const { data, error } = await supabase
       .from('sessions')
-      .select('*, classes(id, name, grade_level, teacher_email)')
+      .select('*, classes(id, name, grade_level, teacher_phone)')
       .eq('date', today)
-      .eq('teacher_email', user!.email!)
+      .eq('teacher_phone', teacherPhone!)
       .order('period');
     setLoading(false);
     if (error) {
@@ -39,7 +39,7 @@ export default function TeacherDashboard() {
     await signOut();
   }
 
-  const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'المعلم';
+  const displayName = teacherName || teacherPhone || 'المعلم';
   const todayLabel = new Date().toLocaleDateString('ar-SA', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   });

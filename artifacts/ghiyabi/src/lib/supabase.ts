@@ -21,7 +21,13 @@ export interface Class {
   id: string;
   name: string;
   grade_level: string;
-  teacher_email: string | null;
+  teacher_phone: string | null;
+}
+
+export interface Teacher {
+  phone: string;
+  name: string;
+  is_active: boolean;
 }
 
 export interface Student {
@@ -39,7 +45,7 @@ export interface Session {
   period: string;
   subject: string;
   class_id: string | null;
-  teacher_email: string;
+  teacher_phone: string;
   classes?: Class;
 }
 

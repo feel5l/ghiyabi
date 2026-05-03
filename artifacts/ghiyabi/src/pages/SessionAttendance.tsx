@@ -36,7 +36,7 @@ export default function SessionAttendance() {
     // Load session with class info
     const { data: sessionData, error: sessionError } = await supabase
       .from('sessions')
-      .select('*, classes(id, name, grade_level, teacher_email)')
+      .select('*, classes(id, name, grade_level, teacher_phone)')
       .eq('id', id)
       .single();
 

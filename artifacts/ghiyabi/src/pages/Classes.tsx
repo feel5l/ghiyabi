@@ -10,7 +10,7 @@ export default function Classes() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editClass, setEditClass] = useState<Class | null>(null);
-  const [form, setForm] = useState({ name: '', grade_level: '', teacher_email: '' });
+  const [form, setForm] = useState({ name: '', grade_level: '', teacher_phone: '' });
   const [saving, setSaving] = useState(false);
 
   const GRADE_OPTIONS = ['Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
@@ -27,13 +27,13 @@ export default function Classes() {
 
   function openAdd() {
     setEditClass(null);
-    setForm({ name: '', grade_level: GRADE_OPTIONS[0], teacher_email: '' });
+    setForm({ name: '', grade_level: GRADE_OPTIONS[0], teacher_phone: '' });
     setShowForm(true);
   }
 
   function openEdit(cls: Class) {
     setEditClass(cls);
-    setForm({ name: cls.name, grade_level: cls.grade_level, teacher_email: cls.teacher_email || '' });
+    setForm({ name: cls.name, grade_level: cls.grade_level, teacher_phone: cls.teacher_phone || '' });
     setShowForm(true);
   }
 
@@ -44,7 +44,7 @@ export default function Classes() {
     const payload = {
       name: form.name.trim(),
       grade_level: form.grade_level,
-      teacher_email: form.teacher_email.trim() || null,
+      teacher_phone: form.teacher_phone.trim() || null,
     };
     if (editClass) {
       const { error } = await supabase.from('classes').update(payload).eq('id', editClass.id);
@@ -113,11 +113,13 @@ export default function Classes() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1.5">بريد المعلم</label>
+                  <label className="block text-sm font-medium mb-1.5">رقم هاتف المعلم</label>
                   <input
-                    type="email"
-                    value={form.teacher_email}
-                    onChange={(e) => setForm(f => ({ ...f, teacher_email: e.target.value }))}
+                    type="tel"
+                    value={form.teacher_phone}
+                    onChange={(e) => setForm(f => ({ ...f, teacher_phone: e.target.value }))}
+                    placeholder="05XXXXXXXX"
+                    dir="ltr"
                     className="w-full h-11 px-3 border border-input rounded-xl bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                   />
                 </div>
@@ -153,8 +155,8 @@ export default function Classes() {
                     <div key={cls.id} className="flex items-center justify-between px-4 py-3">
                       <div>
                         <p className="font-semibold">{grade} — {cls.name}</p>
-                        {cls.teacher_email && (
-                          <p className="text-xs text-muted-foreground mt-0.5">{cls.teacher_email}</p>
+                        {cls.teacher_phone && (
+                          <p className="text-xs text-muted-foreground mt-0.5">{cls.teacher_phone}</p>
                         )}
                       </div>
                       <div className="flex items-center gap-3">

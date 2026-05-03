@@ -14,31 +14,31 @@ ON CONFLICT DO NOTHING;
 -- =============================================================
 
 -- Grade 3 (4 classes)
-INSERT INTO classes (id, name, grade_level, teacher_email) VALUES
-  ('00000000-0000-0000-0000-000000000001', '3-A', 'Grade 3', 'teacher3a@school.edu'),
-  ('00000000-0000-0000-0000-000000000002', '3-B', 'Grade 3', 'teacher3b@school.edu'),
-  ('00000000-0000-0000-0000-000000000003', '3-C', 'Grade 3', 'teacher3c@school.edu'),
-  ('00000000-0000-0000-0000-000000000004', '3-D', 'Grade 3', 'teacher3d@school.edu')
+INSERT INTO classes (id, name, grade_level, teacher_phone) VALUES
+  ('00000000-0000-0000-0000-000000000001', '3-A', 'Grade 3', '0501000001'),
+  ('00000000-0000-0000-0000-000000000002', '3-B', 'Grade 3', '0501000002'),
+  ('00000000-0000-0000-0000-000000000003', '3-C', 'Grade 3', '0501000003'),
+  ('00000000-0000-0000-0000-000000000004', '3-D', 'Grade 3', '0501000004')
 ON CONFLICT DO NOTHING;
 
 -- Grade 4 (3 classes)
-INSERT INTO classes (id, name, grade_level, teacher_email) VALUES
-  ('00000000-0000-0000-0000-000000000005', '4-A', 'Grade 4', 'teacher4a@school.edu'),
-  ('00000000-0000-0000-0000-000000000006', '4-B', 'Grade 4', 'teacher4b@school.edu'),
-  ('00000000-0000-0000-0000-000000000007', '4-C', 'Grade 4', 'teacher4c@school.edu')
+INSERT INTO classes (id, name, grade_level, teacher_phone) VALUES
+  ('00000000-0000-0000-0000-000000000005', '4-A', 'Grade 4', '0501000005'),
+  ('00000000-0000-0000-0000-000000000006', '4-B', 'Grade 4', '0501000006'),
+  ('00000000-0000-0000-0000-000000000007', '4-C', 'Grade 4', '0501000007')
 ON CONFLICT DO NOTHING;
 
 -- Grade 5 (3 classes)
-INSERT INTO classes (id, name, grade_level, teacher_email) VALUES
-  ('00000000-0000-0000-0000-000000000008', '5-A', 'Grade 5', 'teacher5a@school.edu'),
-  ('00000000-0000-0000-0000-000000000009', '5-B', 'Grade 5', 'teacher5b@school.edu'),
-  ('00000000-0000-0000-0000-000000000010', '5-C', 'Grade 5', 'teacher5c@school.edu')
+INSERT INTO classes (id, name, grade_level, teacher_phone) VALUES
+  ('00000000-0000-0000-0000-000000000008', '5-A', 'Grade 5', '0501000008'),
+  ('00000000-0000-0000-0000-000000000009', '5-B', 'Grade 5', '0501000009'),
+  ('00000000-0000-0000-0000-000000000010', '5-C', 'Grade 5', '0501000010')
 ON CONFLICT DO NOTHING;
 
 -- Grade 6 (2 classes)
-INSERT INTO classes (id, name, grade_level, teacher_email) VALUES
-  ('00000000-0000-0000-0000-000000000011', '6-A', 'Grade 6', 'teacher6a@school.edu'),
-  ('00000000-0000-0000-0000-000000000012', '6-B', 'Grade 6', 'teacher6b@school.edu')
+INSERT INTO classes (id, name, grade_level, teacher_phone) VALUES
+  ('00000000-0000-0000-0000-000000000011', '6-A', 'Grade 6', '0501000011'),
+  ('00000000-0000-0000-0000-000000000012', '6-B', 'Grade 6', '0501000012')
 ON CONFLICT DO NOTHING;
 
 -- =============================================================
@@ -150,10 +150,17 @@ INSERT INTO students (full_name, class_id, parent_email, parent_phone) VALUES
 
 -- Example sessions for testing (run separately if needed):
 /*
-INSERT INTO sessions (date, period, subject, class_id, teacher_email) VALUES
-  (CURRENT_DATE, 'P1', 'الرياضيات', '00000000-0000-0000-0000-000000000001', 'teacher3a@school.edu'),
-  (CURRENT_DATE, 'P2', 'اللغة العربية', '00000000-0000-0000-0000-000000000001', 'teacher3a@school.edu'),
-  (CURRENT_DATE, 'P3', 'العلوم', '00000000-0000-0000-0000-000000000001', 'teacher3a@school.edu'),
-  (CURRENT_DATE, 'P1', 'الرياضيات', '00000000-0000-0000-0000-000000000005', 'teacher4a@school.edu'),
-  (CURRENT_DATE, 'P2', 'التربية الإسلامية', '00000000-0000-0000-0000-000000000005', 'teacher4a@school.edu');
+INSERT INTO sessions (date, period, subject, class_id, teacher_phone) VALUES
+  (CURRENT_DATE, 'P1', 'الرياضيات', '00000000-0000-0000-0000-000000000001', '0501000001'),
+  (CURRENT_DATE, 'P2', 'اللغة العربية', '00000000-0000-0000-0000-000000000001', '0501000001'),
+  (CURRENT_DATE, 'P3', 'العلوم', '00000000-0000-0000-0000-000000000001', '0501000001'),
+  (CURRENT_DATE, 'P1', 'الرياضيات', '00000000-0000-0000-0000-000000000005', '0501000005'),
+  (CURRENT_DATE, 'P2', 'التربية الإسلامية', '00000000-0000-0000-0000-000000000005', '0501000005');
 */
+
+-- Sample teachers
+INSERT INTO teachers (phone, name, is_active) VALUES
+  ('0501000001', 'محمد أحمد', true),
+  ('0501000002', 'سارة علي', true),
+  ('0501000003', 'خالد عمر', true)
+ON CONFLICT DO NOTHING;
