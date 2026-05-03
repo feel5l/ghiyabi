@@ -241,6 +241,12 @@ export default function AdminSessions() {
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-3">
           <Link to="/admin" className="text-primary hover:underline text-sm font-medium">← لوحة الإدارة</Link>
           <h1 className="flex-1 text-lg font-bold">إدارة الحصص</h1>
+          <Link
+            to="/admin/schedule"
+            className="min-h-[40px] px-3 border border-primary text-primary rounded-lg text-sm font-semibold hover:bg-primary/5 flex items-center"
+          >
+            🗓️ الجدول الأسبوعي
+          </Link>
           <button
             onClick={() => setShowImport(true)}
             className="min-h-[40px] px-3 border border-primary text-primary rounded-lg text-sm font-semibold hover:bg-primary/5"
@@ -418,7 +424,7 @@ export default function AdminSessions() {
             <div className="text-5xl mb-4">📅</div>
             <h3 className="text-lg font-semibold mb-2">لا توجد حصص في هذا اليوم</h3>
             <p className="text-sm text-muted-foreground mb-4">أضف حصصاً لتظهر للمعلمين في لوحة التحكم</p>
-            <div className="flex items-center justify-center gap-3">
+            <div className="flex flex-wrap items-center justify-center gap-3">
               <button
                 onClick={openAdd}
                 className="px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:opacity-90"
@@ -431,6 +437,12 @@ export default function AdminSessions() {
               >
                 📥 استيراد من قائمة
               </button>
+              <Link
+                to="/admin/schedule"
+                className="px-5 py-2.5 border border-green-600 text-green-700 rounded-xl text-sm font-semibold hover:bg-green-50"
+              >
+                🗓️ تطبيق الجدول الأسبوعي
+              </Link>
             </div>
           </div>
         ) : (

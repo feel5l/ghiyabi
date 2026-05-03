@@ -49,6 +49,15 @@ export interface Session {
   classes?: Class;
 }
 
+export interface WeeklySchedule {
+  id: string;
+  day_of_week: number;
+  period: string;
+  subject: string;
+  class_id: string | null;
+  teacher_phone: string;
+}
+
 export interface AttendanceLog {
   id: string;
   student_id: string;
