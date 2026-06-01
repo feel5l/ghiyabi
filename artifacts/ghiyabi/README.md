@@ -48,10 +48,12 @@ Publish directory is **`artifacts/ghiyabi/dist/public`** (auto-detected via `pnp
 3. Click **Run**
 4. Then run `supabase/seed.sql` to insert the 12 classes and sample students
 
-> **Note:** To add yourself as admin, update the email in `seed.sql`:
-> ```sql
-> INSERT INTO admins (email) VALUES ('your-email@example.com');
-> ```
+> **Default admin (test):** After `schema.sql`, run `seed_admin_auth.sql` or create user in Supabase Auth:
+> - **Email:** `admin@school.test`
+> - **Password:** `TestPass123!`
+> - The same email must exist in table `admins` (see `seed.sql`).
+
+> **Production:** Replace with your real email in both Supabase Auth and `INSERT INTO admins (email) VALUES ('your-email@example.com');`
 
 ### 3. Set Up Google OAuth (optional)
 
