@@ -33,6 +33,39 @@ artifacts/
 lib/              # Shared libraries
 ```
 
+## Netlify Quick Start (~5 minutes)
+
+For the full checklist and recovery steps, see [`.cursor/rules/netlify-deployment-prep.mdc`](.cursor/rules/netlify-deployment-prep.mdc).
+
+```bash
+# 1. CLI + env
+npm install -g netlify-cli
+cp artifacts/ghiyabi/.env.example artifacts/ghiyabi/.env
+# Edit .env with your Supabase URL and anon key
+
+# 2. Validate without deploying
+pnpm install
+pnpm run deploy:validate          # preflight only
+pnpm run deploy:dry-run           # checklist + typecheck, no Netlify upload
+
+# 3. Link site and sync env to Netlify
+netlify init
+pnpm run fix:env                  # netlify env:import artifacts/ghiyabi/.env
+
+# 4. Production deploy (runs build + checks first)
+pnpm run deploy:production
+```
+
+| Script | What it does |
+|--------|----------------|
+| `pnpm run detect:publish` | Prints `artifacts/ghiyabi/dist/public` (Vite output) |
+| `pnpm run predeploy:check` | Fails if local/Netlify env vars are missing |
+| `pnpm run fix:env` | Imports local `.env` into linked Netlify site |
+
+If `netlify env:list` fails: run `netlify login`, then `netlify link`, then `pnpm run fix:env` again.
+
+---
+
 ## Running Locally
 
 ### Prerequisites
