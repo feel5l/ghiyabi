@@ -1,0 +1,60 @@
+---
+description: Netlify deployment prep — env parity, build checks, recovery paths
+globs:
+  - netlify.toml
+  - artifacts/ghiyabi/.env*
+  - scripts/netlify/**
+---
+
+# Netlify Deployment Prep (Ghiyabi monorepo)
+
+## Quick Start (first deploy, ~5 minutes)
+
+1. `npm install -g netlify-cli` (or `pnpm add -g netlify-cli`)
+2. `cp artifacts/ghiyabi/.env.example artifacts/ghiyabi/.env` — fill `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
+3. `pnpm install && pnpm run deploy:validate` (dry validation, no deploy)
+4. `netlify init` → link site → `pnpm run fix:env` (import local env to Netlify)
+5. `pnpm run deploy:production` (runs checks, then `netlify deploy --filter @workspace/ghiyabi --prod --no-build`)
+
+Monorepo: always pass `--filter @workspace/ghiyabi` to avoid interactive project picker.
+
+**Publish directory (do not guess):** run `pnpm run detect:publish` → must match root `netlify.toml` (`artifacts/ghiyabi/dist/public` for this Vite app).
+
+## Core rules (pre-deploy)
+
+1. **Env parity** — `pnpm run predeploy:check` (`scripts/netlify/validate-env.mjs`) fails if `.env` is missing keys or still has placeholders.
+2. **Build integrity** — `pnpm --filter @workspace/ghiyabi run build` must succeed before production deploy.
+3. **Security headers** — defined in root `netlify.toml` `[[headers]]`; extend CSP if new third-party origins are added.
+4. **Monorepo build** — Netlify build command is in root `netlify.toml`: `pnpm install && pnpm --filter @workspace/ghiyabi run build`.
+
+## Recovery procedures
+
+| Symptom | Fix |
+|--------|-----|
+| `netlify env:list` fails | `netlify login` → `netlify link` → retry `pnpm run fix:env` |
+| Missing vars on Netlify | `pnpm run fix:env` (imports `artifacts/ghiyabi/.env`) |
+| Wrong publish directory | `pnpm run detect:publish` and update `publish` in `netlify.toml` |
+| Deploy 404 on refresh | Confirm `[[redirects]]` SPA rule exists in `netlify.toml` |
+| Google login redirect error | See `artifacts/ghiyabi/README.md` → Post-Deployment: Enable Google Login |
+
+## Scripts reference
+
+| Command | Purpose |
+|---------|---------|
+| `pnpm run detect:publish` | Print detected publish folder |
+| `pnpm run predeploy:check` | Local + Netlify env validation |
+| `pnpm run deploy:validate` | Full preflight without build/deploy |
+| `pnpm run deploy:dry-run` | Simulated checklist + typecheck |
+| `pnpm run deploy:production` | Validate then `netlify deploy --prod` |
+| `pnpm run fix:env` | `netlify env:import artifacts/ghiyabi/.env` |
+
+## Accessibility / logs
+
+- Scripts prefix outcomes with `[OK]`, `[ERR]`, or `[WARN]` (not color-only).
+- Set `NO_COLOR=1` to disable ANSI colors.
+- Set `LANG=ar` for Arabic recovery messages in scripts.
+
+## Do not
+
+- Put `SUPABASE_SERVICE_ROLE_KEY` or `RESEND_API_KEY` in frontend `.env` (Edge Function secrets only).
+- Change publish dir to generic `dist` without running `detect:publish` — this monorepo outputs to `artifacts/ghiyabi/dist/public`.

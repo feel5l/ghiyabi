@@ -4,10 +4,10 @@
 -- Run this AFTER schema.sql
 -- Inserts all 12 classes and 5+ sample students per class
 
--- Insert admin (update email to match your Supabase auth user)
+-- Admin role (email must match a Supabase Auth user — see seed_admin_auth.sql)
 INSERT INTO admins (email) VALUES
-  ('admin@school.edu')
-ON CONFLICT DO NOTHING;
+  ('admin@school.test')
+ON CONFLICT (email) DO NOTHING;
 
 -- =============================================================
 -- 1. CLASSES

@@ -18,6 +18,22 @@ A school attendance tracking system built with React + Vite + Supabase.
 
 ## Setup Guide
 
+### Quick Start (Netlify deploy, ~5 minutes)
+
+```bash
+npm install -g netlify-cli
+cp artifacts/ghiyabi/.env.example artifacts/ghiyabi/.env   # fill Supabase keys
+pnpm install
+pnpm run deploy:validate
+netlify init
+pnpm run fix:env
+pnpm run deploy:production
+```
+
+Publish directory is **`artifacts/ghiyabi/dist/public`** (auto-detected via `pnpm run detect:publish`). Root `netlify.toml` already sets the monorepo build command.
+
+---
+
 ### 1. Create a Supabase Project
 
 1. Go to [supabase.com](https://supabase.com) and click **Start your project**
@@ -32,10 +48,12 @@ A school attendance tracking system built with React + Vite + Supabase.
 3. Click **Run**
 4. Then run `supabase/seed.sql` to insert the 12 classes and sample students
 
-> **Note:** To add yourself as admin, update the email in `seed.sql`:
-> ```sql
-> INSERT INTO admins (email) VALUES ('your-email@example.com');
-> ```
+> **Default admin (test):** After `schema.sql`, run `seed_admin_auth.sql` or create user in Supabase Auth:
+> - **Email:** `admin@school.test`
+> - **Password:** `TestPass123!`
+> - The same email must exist in table `admins` (see `seed.sql`).
+
+> **Production:** Replace with your real email in both Supabase Auth and `INSERT INTO admins (email) VALUES ('your-email@example.com');`
 
 ### 3. Set Up Google OAuth (optional)
 
@@ -117,17 +135,36 @@ After deploying, set up the Database Webhook in Supabase:
 
 ### 8. Deploy to Netlify
 
+**Option A — CLI (recommended)**
+
+```bash
+pnpm run predeploy:check    # Error: stops if .env keys missing
+netlify init
+pnpm run fix:env            # sync .env → Netlify
+pnpm run deploy:production  # build + deploy
+```
+
+**Option B — Dashboard**
+
 1. Go to [netlify.com](https://netlify.com) → **New site** → **Import from GitHub**
 2. Select your repository
-3. Build settings are auto-detected from the root `netlify.toml` — no changes needed:
+3. Build settings from root `netlify.toml` (verify with `pnpm run detect:publish`):
    - **Build command:** `pnpm install && pnpm --filter @workspace/ghiyabi run build`
    - **Publish directory:** `artifacts/ghiyabi/dist/public`
-4. Before deploying, click **Add environment variables** and add:
-   - `VITE_SUPABASE_URL` — your Supabase project URL
-   - `VITE_SUPABASE_ANON_KEY` — your Supabase anon key
+4. Add env vars (or run `pnpm run fix:env` after linking):
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
 5. Click **Deploy site**
 
-> SPA routing (no 404 on refresh) is handled automatically by the `[[redirects]]` rule in the root `netlify.toml`.
+**If deploy fails**
+
+| Problem | Recovery |
+|---------|----------|
+| `netlify env:list` error | `netlify login` → `netlify link` → `pnpm run fix:env` |
+| Wrong publish folder | `pnpm run detect:publish` and match `netlify.toml` |
+| Missing env on Netlify | `pnpm run fix:env` |
+
+> SPA routing is handled by `[[redirects]]` in root `netlify.toml`. Security headers (CSP, X-Frame-Options) are in the same file.
 
 ---
 
