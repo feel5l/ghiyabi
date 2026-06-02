@@ -51,7 +51,9 @@ export function t(key, vars = {}) {
     ? "ar"
     : "en";
   const message = MESSAGES[lang][key] ?? MESSAGES.en[key] ?? key;
-  return String(message).replace(/\{(\w+)\}/g, (_, k) => String(vars[k] ?? ""));
+  return String(message).replace(/\{(\w+)\}/g, (_, k) =>
+    Object.hasOwn(vars, k) ? String(vars[k]) : `{${k}}`,
+  );
 }
 
 export const useColor = process.stdout.isTTY && !process.env.NO_COLOR;

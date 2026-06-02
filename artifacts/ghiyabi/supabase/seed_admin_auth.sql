@@ -19,13 +19,19 @@ ON CONFLICT (email) DO NOTHING;
 --    To reset password for an existing user:
 --    SELECT set_config('app.admin_password', 'YOUR-STRONG-PASSWORD', false);
 --    (Run the UPDATE right after setting app.admin_password in the same SQL session.)
+DO $$
+BEGIN
+  IF COALESCE(current_setting('app.admin_password', true), '') = '' THEN
+    RAISE EXCEPTION 'Missing app.admin_password. Run: SELECT set_config(''app.admin_password'', ''YOUR-STRONG-PASSWORD'', false);';
+  END IF;
+END $$;
+
 UPDATE auth.users
 SET
-  encrypted_password = extensions.crypt(current_setting('app.admin_password', true), extensions.gen_salt('bf')),
+  encrypted_password = extensions.crypt(current_setting('app.admin_password', true), extensions.gen_salt('bf', 10)),
   email_confirmed_at = COALESCE(email_confirmed_at, now()),
   updated_at = now()
-WHERE email = 'admin@school.test'
-  AND COALESCE(current_setting('app.admin_password', true), '') <> '';
+WHERE email = 'admin@school.test';
 
 -- Production: replace admin@school.test with your real admin email in both
 -- auth.users and public.admins, and use a strong unique password.

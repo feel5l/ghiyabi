@@ -51,7 +51,7 @@ function checkSecurityHeaders() {
   return {
     ok: false,
     detail:
-      "netlify.toml missing [[headers]] block; define root [[headers]] with required security headers",
+      "netlify.toml missing [[headers]] block; define root [[headers]] with required security headers (CSP, X-Frame-Options, Referrer-Policy)",
   };
 }
 
