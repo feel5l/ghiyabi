@@ -2,16 +2,16 @@
 # Netlify uses the root-level netlify.toml instead of this file.
 # This file is kept as a reference for standalone deployments only.
 #
-# For standalone deployment (if pushing only artifacts/ghiyabi/ to GitHub):
-# - Build command: npm install && npm run build
-# - Publish directory: dist/public
+# For standalone deployment (if pushing only artifacts/ghiyabi/ to GitHub),
+# make sure pnpm workspace catalog dependencies are available.
 
 [build]
-  command = "npm install && npm run build"
-  publish = "dist/public"
+  command = "pnpm install && pnpm --filter @workspace/ghiyabi run build"
+  publish = "artifacts/ghiyabi/dist/public"
 
 [build.environment]
-  NODE_VERSION = "22"
+  NODE_VERSION = "20"
+  PNPM_VERSION = "10"
 
 [[redirects]]
   from = "/*"
