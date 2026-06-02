@@ -24,6 +24,7 @@ const MESSAGES = {
       "Could not read Netlify env vars. Recovery: netlify login && netlify link",
     netlifyMissingKeys: "Netlify site is missing variables:",
     fixEnvHint: "Run: pnpm run fix:env",
+    recoveryHint: "Recovery: {cmd}",
     detectPublish: "Detected publish directory:",
     noFramework: "No known framework config found in repository root.",
   },
@@ -39,16 +40,18 @@ const MESSAGES = {
       "تعذّر قراءة متغيرات Netlify. الحل: netlify login && netlify link",
     netlifyMissingKeys: "موقع Netlify يفتقد المتغيرات:",
     fixEnvHint: "نفّذ: pnpm run fix:env",
+    recoveryHint: "الحل: {cmd}",
     detectPublish: "مجلد النشر المكتشف:",
     noFramework: "لم يُعثر على إعداد إطار عمل معروف في جذر المستودع.",
   },
 };
 
-export function t(key) {
+export function t(key, vars = {}) {
   const lang = (process.env.LANG || "en").toLowerCase().startsWith("ar")
     ? "ar"
     : "en";
-  return MESSAGES[lang][key] ?? MESSAGES.en[key] ?? key;
+  const message = MESSAGES[lang][key] ?? MESSAGES.en[key] ?? key;
+  return String(message).replace(/\{(\w+)\}/g, (_, k) => String(vars[k] ?? ""));
 }
 
 export const useColor = process.stdout.isTTY && !process.env.NO_COLOR;
@@ -70,8 +73,10 @@ export function cyan(text) {
 }
 
 /** Plain-text status for screen readers / no-color terminals */
-export function status(ok, label) {
-  return ok ? `[OK] ${label}` : `[ERR] ${label}`;
+export function status(level, label) {
+  if (level === true || level === "ok") return `[OK] ${label}`;
+  if (level === "warn") return `[WARN] ${label}`;
+  return `[ERR] ${label}`;
 }
 
 export function parseEnvFile(filePath) {

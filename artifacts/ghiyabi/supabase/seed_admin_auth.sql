@@ -6,7 +6,7 @@
 --
 -- Default credentials (test / E2E):
 --   Email:    admin@school.test
---   Password: TestPass123!
+--   Password: set at runtime via app.admin_password (see below)
 --
 -- 1) Register the admin row (role):
 INSERT INTO admins (email) VALUES ('admin@school.test')
@@ -17,12 +17,15 @@ ON CONFLICT (email) DO NOTHING;
 --    Authentication → Users → Add user → Email + Password, Auto-confirm.
 --
 --    To reset password for an existing user:
+--    SELECT set_config('app.admin_password', 'YOUR-STRONG-PASSWORD', false);
+--    (Run the UPDATE right after setting app.admin_password in the same SQL session.)
 UPDATE auth.users
 SET
-  encrypted_password = extensions.crypt('TestPass123!', extensions.gen_salt('bf')),
+  encrypted_password = extensions.crypt(current_setting('app.admin_password', true), extensions.gen_salt('bf')),
   email_confirmed_at = COALESCE(email_confirmed_at, now()),
   updated_at = now()
-WHERE email = 'admin@school.test';
+WHERE email = 'admin@school.test'
+  AND COALESCE(current_setting('app.admin_password', true), '') <> '';
 
 -- Production: replace admin@school.test with your real admin email in both
 -- auth.users and public.admins, and use a strong unique password.

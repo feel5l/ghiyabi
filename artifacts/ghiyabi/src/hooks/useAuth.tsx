@@ -14,16 +14,13 @@ interface AuthState {
 const AuthContext = createContext<AuthState | null>(null);
 
 async function checkRole(email: string): Promise<UserRole> {
-  try {
-    const { data } = await supabase
-      .from('admins')
-      .select('email')
-      .eq('email', email)
-      .maybeSingle();
-    return data ? 'admin' : 'teacher';
-  } catch {
-    return 'teacher';
-  }
+  const { data, error } = await supabase
+    .from('admins')
+    .select('email')
+    .eq('email', email)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? 'admin' : 'teacher';
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -33,27 +30,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
+    let authEventId = 0;
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (cancelled) return;
+      const eventId = ++authEventId;
       const u = session?.user ?? null;
       setUser(u);
+      setRole(null);
+      setLoading(true);
       // IMPORTANT: never await inside the onAuthStateChange callback —
       // supabase-js v2 holds an internal auth lock during the callback so any
       // awaited PostgREST/Auth call from here will deadlock until the lock
       // times out (~10s). Defer the role lookup to a separate microtask.
       setTimeout(async () => {
-        if (cancelled) return;
+        if (cancelled || eventId !== authEventId) return;
         try {
           if (u?.email) {
-            const r = await checkRole(u.email);
-            if (cancelled) return;
-            setRole(r);
+            try {
+              const r = await checkRole(u.email);
+              if (cancelled || eventId !== authEventId) return;
+              setRole(r);
+            } catch (error) {
+              console.error('Failed to check role:', error);
+              if (cancelled || eventId !== authEventId) return;
+              setRole('teacher');
+            }
           } else {
+            if (cancelled || eventId !== authEventId) return;
             setRole(null);
           }
         } finally {
-          if (!cancelled) setLoading(false);
+          if (!cancelled && eventId === authEventId) setLoading(false);
         }
       }, 0);
     });

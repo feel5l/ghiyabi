@@ -8,6 +8,7 @@ export default defineConfig({
   workers: 1,
   reporter: [['list']],
   use: {
+    // Use a separate port to run no-config scenarios in isolation from the main E2E server.
     baseURL: process.env.E2E_BASE_URL || 'http://localhost:5174',
     actionTimeout: 7_000,
     navigationTimeout: 15_000,

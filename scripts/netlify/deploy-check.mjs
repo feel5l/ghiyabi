@@ -49,9 +49,9 @@ function checkSecurityHeaders() {
   const hasHeaders = content.includes("[[headers]]");
   if (hasHeaders) return { ok: true, detail: "[[headers]] block present" };
   return {
-    ok: true,
-    detail: "No [[headers]] yet (optional; add CSP/X-Frame-Options for production)",
-    warn: true,
+    ok: false,
+    detail:
+      "netlify.toml missing [[headers]] block; define root [[headers]] with required security headers",
   };
 }
 
@@ -172,7 +172,16 @@ if (allOk) {
 } else {
   console.log("");
   console.error(red(`${t("errPrefix")} Pre-deploy checks failed.`));
-  console.error(yellow(`Recovery: pnpm run fix:env`));
+  const failedStep = results.find((r) => !r.ok)?.label;
+  const recoveryByStep = {
+    Environment: "pnpm run fix:env",
+    "Publish directory": "pnpm run detect:publish",
+    "netlify.toml": "create root netlify.toml",
+    "Security headers": "add [[headers]] in netlify.toml",
+    Build: "pnpm --filter @workspace/ghiyabi run build",
+  };
+  const cmd = recoveryByStep[failedStep] ?? "pnpm run deploy:validate";
+  console.error(yellow(t("recoveryHint", { cmd })));
   process.exit(1);
 }
 

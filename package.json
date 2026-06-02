@@ -11,8 +11,8 @@
     "predeploy:check": "node scripts/netlify/validate-env.mjs",
     "deploy:validate": "node scripts/netlify/deploy-check.mjs --validate-only",
     "deploy:dry-run": "node scripts/netlify/deploy-check.mjs --dry-run",
-    "deploy:production": "node scripts/netlify/deploy-check.mjs && pnpm exec netlify deploy --filter @workspace/ghiyabi --prod --no-build --dir=artifacts/ghiyabi/dist/public",
-    "fix:env": "pnpm exec netlify env:import artifacts/ghiyabi/.env"
+    "deploy:production": "node scripts/netlify/deploy-check.mjs && pnpm exec netlify deploy --prod --no-build --dir=artifacts/ghiyabi/dist/public",
+    "fix:env": "pnpm --filter @workspace/ghiyabi exec netlify env:import .env"
   },
   "private": true,
   "devDependencies": {

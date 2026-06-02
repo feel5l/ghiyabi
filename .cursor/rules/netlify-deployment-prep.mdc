@@ -14,9 +14,9 @@ globs:
 2. `cp artifacts/ghiyabi/.env.example artifacts/ghiyabi/.env` — fill `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
 3. `pnpm install && pnpm run deploy:validate` (dry validation, no deploy)
 4. `netlify init` → link site → `pnpm run fix:env` (import local env to Netlify)
-5. `pnpm run deploy:production` (runs checks, then `netlify deploy --filter @workspace/ghiyabi --prod --no-build`)
+5. `pnpm run deploy:production` (runs checks, then `netlify deploy --prod --no-build`)
 
-Monorepo: always pass `--filter @workspace/ghiyabi` to avoid interactive project picker.
+Monorepo: run Netlify commands from the Ghiyabi package context (`pnpm --filter @workspace/ghiyabi exec ...`) when needed.
 
 **Publish directory (do not guess):** run `pnpm run detect:publish` → must match root `netlify.toml` (`artifacts/ghiyabi/dist/public` for this Vite app).
 

@@ -43,14 +43,14 @@ function fetchNetlifyEnv() {
 
 const requiredKeys = parseExampleKeys(ENV_EXAMPLE);
 if (requiredKeys.length === 0) {
-  console.error(red(`${t("errPrefix")} ${ENV_EXAMPLE} not found or has no keys.`));
+  console.error(red(status(false, `${ENV_EXAMPLE} not found or has no keys.`)));
   process.exit(1);
 }
 
 let failed = false;
 
 if (!existsSync(ENV_LOCAL)) {
-  console.error(red(`${t("errPrefix")} ${t("missingEnvFile")}`));
+  console.error(red(status(false, t("missingEnvFile"))));
   console.error(`  cp artifacts/ghiyabi/.env.example artifacts/ghiyabi/.env`);
   failed = true;
 } else {
@@ -58,12 +58,10 @@ if (!existsSync(ENV_LOCAL)) {
   for (const key of requiredKeys) {
     const value = local?.[key];
     if (!value) {
-      console.error(red(`${t("errPrefix")} ${t("missingKey")} ${key}`));
+      console.error(red(status(false, `${t("missingKey")} ${key}`)));
       failed = true;
     } else if (isPlaceholder(value)) {
-      console.error(
-        yellow(`${t("warnPrefix")} ${t("placeholderValue")} ${key}`),
-      );
+      console.error(yellow(status("warn", `${t("placeholderValue")} ${key}`)));
       failed = true;
     }
   }
@@ -77,23 +75,25 @@ if (!existsSync(ENV_LOCAL)) {
 const skipNetlify = process.argv.includes("--local-only");
 if (!skipNetlify) {
   if (!hasNetlifyCli()) {
-    console.warn(yellow(`${t("warnPrefix")} ${t("netlifyCliMissing")}`));
+    console.warn(yellow(status("warn", t("netlifyCliMissing"))));
     console.warn(`  ${t("fixEnvHint")}`);
+    failed = true;
   } else {
     const netlify = fetchNetlifyEnv();
     if (!netlify.ok) {
-      console.warn(yellow(`${t("warnPrefix")} ${t("netlifyEnvListFailed")}`));
+      console.warn(yellow(status("warn", t("netlifyEnvListFailed"))));
       if (netlify.error) {
         console.warn(netlify.error.trim().split("\n")[0]);
       }
       console.warn(`  ${t("fixEnvHint")}`);
+      failed = true;
     } else {
       const missingOnNetlify = requiredKeys.filter(
         (k) => !netlify.vars?.[k] || isPlaceholder(String(netlify.vars[k])),
       );
       if (missingOnNetlify.length > 0) {
         console.error(
-          red(`${t("errPrefix")} ${t("netlifyMissingKeys")} ${missingOnNetlify.join(", ")}`),
+          red(status(false, `${t("netlifyMissingKeys")} ${missingOnNetlify.join(", ")}`)),
         );
         console.error(`  ${t("fixEnvHint")}`);
         failed = true;

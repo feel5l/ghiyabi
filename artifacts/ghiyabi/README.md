@@ -50,9 +50,9 @@ Publish directory is **`artifacts/ghiyabi/dist/public`** (auto-detected via `pnp
 
 > **Default admin (test):** After `schema.sql`, run `seed_admin_auth.sql` or create user in Supabase Auth:
 > - **Email:** `admin@school.test`
-> - **Password:** `TestPass123!`
+> - **Password:** set `app.admin_password` in SQL Editor before running password reset:
+>   `SELECT set_config('app.admin_password', 'YOUR-STRONG-PASSWORD', false);`
 > - The same email must exist in table `admins` (see `seed.sql`).
-
 > **Production:** Replace with your real email in both Supabase Auth and `INSERT INTO admins (email) VALUES ('your-email@example.com');`
 
 ### 3. Set Up Google OAuth (optional)

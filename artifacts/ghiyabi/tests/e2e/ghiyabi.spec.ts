@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || 'admin@school.test';
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || 'TestPass123!';
-const TEACHER_EMAIL = process.env.E2E_TEACHER_EMAIL || 'teacher@school.test';
+const TEACHER_EMAIL = process.env.E2E_TEACHER_EMAIL || 'teacher3a@school.edu';
 const TEACHER_PASSWORD = process.env.E2E_TEACHER_PASSWORD || 'TestPass123!';
 
 async function loginWith(page: Page, email: string, password: string) {
@@ -29,11 +29,8 @@ function studentRow(page: Page, name: string) {
 // In several admin forms, <label> has no htmlFor; locate the input/select by the
 // label text using a sibling-based xpath. The <label> is inside a wrapper <div>
 // that also contains the form control.
-function fieldByLabel(page: Page, labelText: string | RegExp, kind: 'input' | 'select' = 'input') {
-  const text = typeof labelText === 'string' ? labelText : labelText.source;
-  return page
-    .locator(`div:has(> label:has-text("${text.replace(/"/g, '\\"')}")) >> ${kind}`)
-    .first();
+function fieldByLabel(page: Page, labelText: string | RegExp, _kind: 'input' | 'select' = 'input') {
+  return page.getByLabel(labelText).first();
 }
 
 test.describe('Ghiyabi end-to-end', () => {
@@ -41,10 +38,10 @@ test.describe('Ghiyabi end-to-end', () => {
     await page.goto('/login');
     await page.keyboard.press('Tab');
     await page.keyboard.press('Tab');
-    await page.keyboard.type('teacher@school.test');
+    await page.keyboard.type(TEACHER_EMAIL);
     await page.keyboard.press('Tab');
     await page.keyboard.type('TestPass123!');
-    await expect(page.getByLabel('البريد الإلكتروني')).toHaveValue('teacher@school.test');
+    await expect(page.getByLabel('البريد الإلكتروني')).toHaveValue(TEACHER_EMAIL);
     await expect(page.getByLabel('كلمة المرور')).toHaveValue('TestPass123!');
     const emailId = await page.getByLabel('البريد الإلكتروني').getAttribute('id');
     expect(emailId).toBeTruthy();
@@ -68,19 +65,19 @@ test.describe('Ghiyabi end-to-end', () => {
     await expect(page.getByRole('heading', { name: 'حصصي اليوم' })).toBeVisible();
     await gotoFirstSession(page);
 
-    const ahmed = studentRow(page, 'أحمد علي');
+    const ahmed = studentRow(page, 'أحمد محمد العمري');
     await ahmed.getByRole('button', { name: /غائب/ }).click();
     await expect(ahmed.locator('span', { hasText: 'غائب' }).first()).toBeVisible({ timeout: 10_000 });
 
-    const sara = studentRow(page, 'سارة محمد');
+    const sara = studentRow(page, 'فاطمة علي الغامدي');
     await sara.getByRole('button', { name: /متأخر/ }).click();
     await expect(sara.locator('span', { hasText: 'متأخر' }).first()).toBeVisible();
 
-    const yousef = studentRow(page, 'يوسف خالد');
+    const yousef = studentRow(page, 'محمد سعد القحطاني');
     await yousef.getByRole('button', { name: /معذور/ }).click();
     await expect(yousef.locator('span', { hasText: 'معذور' }).first()).toBeVisible();
 
-    const layla = studentRow(page, 'ليلى أحمد');
+    const layla = studentRow(page, 'عبدالله عمر الحربي');
     await expect(layla.locator('span', { hasText: 'حاضر' }).first()).toBeVisible();
 
     await page.waitForTimeout(1500);
@@ -89,11 +86,11 @@ test.describe('Ghiyabi end-to-end', () => {
     await page.reload();
     await expect(page).toHaveURL(url);
 
-    await expect(studentRow(page, 'أحمد علي').locator('span', { hasText: 'غائب' }).first()).toBeVisible({
+    await expect(studentRow(page, 'أحمد محمد العمري').locator('span', { hasText: 'غائب' }).first()).toBeVisible({
       timeout: 10_000,
     });
-    await expect(studentRow(page, 'سارة محمد').locator('span', { hasText: 'متأخر' }).first()).toBeVisible();
-    await expect(studentRow(page, 'يوسف خالد').locator('span', { hasText: 'معذور' }).first()).toBeVisible();
+    await expect(studentRow(page, 'فاطمة علي الغامدي').locator('span', { hasText: 'متأخر' }).first()).toBeVisible();
+    await expect(studentRow(page, 'محمد سعد القحطاني').locator('span', { hasText: 'معذور' }).first()).toBeVisible();
   });
 
   test('reload on a deep teacher session URL keeps the user on the session page', async ({ page }) => {
@@ -182,7 +179,10 @@ test.describe('Ghiyabi end-to-end', () => {
     await expect(page.getByText('تم إضافة الحصة')).toBeVisible({ timeout: 10_000 });
     await expect(page.getByText(subject, { exact: true }).first()).toBeVisible();
 
-    await page.getByRole('link', { name: /لوحة الإدارة/ }).first().click().catch(() => {});
+    const adminDashboardLink = page.getByRole('link', { name: /لوحة الإدارة/ }).first();
+    if (await adminDashboardLink.isVisible()) {
+      await adminDashboardLink.click();
+    }
     await page.goto('/admin');
     await page.getByRole('button', { name: 'خروج' }).click();
     await expect(page).toHaveURL(/\/login$/, { timeout: 15_000 });
