@@ -1,15 +1,15 @@
 # نشر وتشغيل Ghiyabi (Netlify + Supabase)
 
-مرجع تنفيذي يكمّل الخطة الهندسية. **معرّف المشروع الحالي:** `nbaveoeouirzniqanziw` — عند استخدام مشروع آخر استبدله في الروابط.
+مرجع تنفيذي يكمّل التوثيق التقني في [`docs/TECHNICAL.md`](docs/TECHNICAL.md) (التقنيات، المفاتيح، مخطط قاعدة البيانات).
 
 ## 1) قاعدة البيانات (Supabase)
 
 1. نفّذ بالترتيب في **SQL Editor**:
    - [`artifacts/ghiyabi/supabase/schema.sql`](artifacts/ghiyabi/supabase/schema.sql)
    - [`artifacts/ghiyabi/supabase/seed.sql`](artifacts/ghiyabi/supabase/seed.sql)
-2. أنشئ مستخدمي **Auth** (مدير / معلمين) بحيث يطابق البريد:
+2. أنشئ مستخدمي **Auth** بحيث يطابق البريد:
    - جدول `public.admins` (المدير)
-   - حقول `classes.teacher_email` (المعلمون)
+3. للمعلمين: أضف أرقام الجوال في جدول `public.teachers` مع `is_active = true` (الحقول المرتبطة بالحصص: `teacher_phone`).
 
 ## 2) مصادقة الواجهة — إضافة عنوان Netlify (مهم)
 
