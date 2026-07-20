@@ -19,10 +19,14 @@ Ghiyabi is a digital attendance platform that allows teachers to record student 
 | Layer | Technology |
 |---|---|
 | Frontend | React 19, Vite, TypeScript, Tailwind CSS v4, Radix UI |
-| Routing | Wouter |
+| Routing | React Router |
 | Backend / BaaS | Supabase (PostgreSQL, Auth, Edge Functions) |
-| Notifications | Resend API (Arabic email alerts) |
+| Notifications | Resend API + optional WhatsApp Cloud API |
+| Analytics / Export | Recharts, ExcelJS |
 | Monorepo | pnpm workspaces |
+| Hosting | Netlify |
+
+**التوثيق التقني الكامل (تقنيات، مفاتيح، قاعدة بيانات):** [`docs/TECHNICAL.md`](docs/TECHNICAL.md)
 
 ## Project Structure
 
