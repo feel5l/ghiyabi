@@ -53,6 +53,14 @@ Thumbs.db
 .env.*
 !.env.example
 
+# Netlify CLI local state
+.netlify/
+**/.netlify/
+
+# Local desktop package archives (created on agent Desktop)
+*.zip
+غياب-زيد.zip
+
 # Local MCP / deploy helpers (do not commit)
 .tmp-notify-absent.json
 mcp-deploy-notify-absent.json
